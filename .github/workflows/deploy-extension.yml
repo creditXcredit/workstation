@@ -1,0 +1,115 @@
+name: Deploy Extension Artifacts
+
+on:
+  push:
+    branches: [main, 'copilot/**']
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - '.github/workflows/deploy-extension.yml'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        run: npm run build
+
+      - name: Package extension
+        run: |
+          cd dist
+          zip -r ../stackbrowseragent-extension.zip .
+          cd ..
+
+      - name: Get version from manifest
+        id: version
+        run: |
+          VERSION=$(node -p "require('./manifest.json').version")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}-${{ github.run_number }}
+          release_name: Extension v${{ steps.version.outputs.version }} Build ${{ github.run_number }}
+          body: |
+            ## StackBrowserAgent Chrome Extension
+
+            ### Installation
+            1. Download `stackbrowseragent-extension.zip`
+            2. Extract the ZIP file
+            3. Open Chrome and navigate to `chrome://extensions/`
+            4. Enable "Developer mode"
+            5. Click "Load unpacked"
+            6. Select the extracted folder
+
+            ### Build Information
+            - **Version:** ${{ steps.version.outputs.version }}
+            - **Build:** ${{ github.run_number }}
+            - **Commit:** ${{ github.sha }}
+            - **Branch:** ${{ github.ref_name }}
+
+            ### What's Included
+            - Chrome extension with React UI
+            - 6 specialized agents
+            - 5 LLM provider integrations
+            - Browser automation capabilities
+            - Workflow engine with 7 templates
+
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./stackbrowseragent-extension.zip
+          asset_name: stackbrowseragent-extension.zip
+          asset_content_type: application/zip
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: extension-build-${{ github.run_number }}
+          path: dist/
+          retention-days: 30
+
+      - name: Generate deployment summary
+        run: |
+          echo "## Chrome Extension Build Complete 🎉" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ steps.version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Build:** ${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Download" >> $GITHUB_STEP_SUMMARY
+          echo "📦 [Download Extension ZIP](${{ steps.create_release.outputs.html_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Installation Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Download the ZIP file from the release" >> $GITHUB_STEP_SUMMARY
+          echo "2. Extract the contents" >> $GITHUB_STEP_SUMMARY
+          echo "3. Open Chrome → Extensions → Enable Developer Mode" >> $GITHUB_STEP_SUMMARY
+          echo "4. Click 'Load unpacked' and select the extracted folder" >> $GITHUB_STEP_SUMMARY
