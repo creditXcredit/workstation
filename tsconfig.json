@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/auth/**/*", "src/index.ts", "src/middleware/**/*", "src/utils/**/*"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "tests",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "src/agents",
+    "src/automation",
+    "src/background",
+    "src/config",
+    "src/content",
+    "src/llm",
+    "src/popup",
+    "src/services",
+    "src/sidepanel",
+    "src/types",
+    "src/workflow"
+  ]
+}
