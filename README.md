@@ -3,6 +3,8 @@
 Browser Agent with JWT Authentication and Railway Deployment
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/stackbrowseragent)
+![Secret Scanning](https://img.shields.io/badge/security-secret%20scanning-brightgreen)
+![Gitleaks](https://img.shields.io/badge/gitleaks-enabled-blue)
 
 ## Features
 
@@ -23,6 +25,7 @@ Browser Agent with JWT Authentication and Railway Deployment
 - 🛡️ **JWT Algorithm Validation** prevents 'none' algorithm attacks
 - 🔐 **Input Sanitization** prevents XSS in user data
 - 🕵️ **Privacy-First Logging** with IP anonymization
+- 🔎 **Automated Secret Scanning** with Gitleaks (prevents credential exposure)
 
 ## Quick Start
 
@@ -299,7 +302,22 @@ If you need to adjust rate limits, modify the `limiter` and `authLimiter` config
 
 - **[Security Policy](SECURITY.md)** - Complete security guidelines and vulnerability reporting
 - **[Security Fixes](SECURITY_FIXES.md)** - Detailed documentation of all security improvements
+- **[Secret Scanning Guide](SECRET_SCANNING.md)** - Automated secret detection with Gitleaks
 - **[Rollback Guide](ROLLBACK_GUIDE.md)** - Emergency rollback procedures for security fixes
+
+#### Automated Secret Scanning
+
+This repository includes **automated secret scanning** using Gitleaks (MIT License, free):
+
+- ✅ Scans every commit for exposed secrets (API keys, tokens, credentials)
+- ✅ Blocks pull requests containing secrets before merge
+- ✅ Reports to GitHub Security tab automatically
+- ✅ Runs on push, pull requests, and daily schedule
+- ✅ Free and high quality (16k+ GitHub stars)
+
+**Detected secret types:** AWS keys, GitHub tokens, database credentials, API keys, SSH keys, JWT secrets, OAuth tokens, and more.
+
+See [SECRET_SCANNING.md](SECRET_SCANNING.md) for complete guide.
 
 ### Known Limitations
 

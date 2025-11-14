@@ -1,0 +1,79 @@
+# Gitleaks configuration for stackBrowserAgent
+# See https://github.com/gitleaks/gitleaks for configuration options
+
+title = "Gitleaks config for stackBrowserAgent"
+
+[extend]
+# Use default Gitleaks rules as baseline
+useDefault = true
+
+# Allowlist configuration to reduce false positives
+[allowlist]
+description = "Allowlist for known safe patterns and test data"
+
+# Paths to exclude from scanning
+paths = [
+  '''\.env\.example$''',           # Example environment files
+  '''tests/fixtures/.*''',         # Test fixture data
+  '''docs/examples/.*''',          # Documentation examples
+  '''^\.github/workflows/.*\.yml$''', # GitHub Actions workflows (secrets managed separately)
+]
+
+# Regular expressions for content to ignore
+regexes = [
+  # Test secrets with obvious test indicators
+  '''test[_-]?secret[_-]?(key|token|password)''',
+  '''(fake|dummy|example|sample)[_-]?(key|token|secret|password)''',
+  '''for[_-]?testing[_-]?only''',
+  
+  # Common documentation examples from AWS/GitHub docs
+  '''AKIAIOSFODNN7EXAMPLE''',      # AWS documentation example
+  '''wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY''',  # AWS documentation example
+  
+  # NPM package versions (not secrets)
+  '''\^\d+\.\d+\.\d+''',
+  
+  # Git commit SHAs (not secrets)
+  '''^[a-f0-9]{40}$''',
+]
+
+# Additional custom rules specific to our project
+[[rules]]
+description = "Detect JWT secrets with common naming patterns"
+id = "jwt-secret-enhanced"
+regex = '''(?i)(jwt|token)[_-]?secret\s*[:=]\s*['"]?([a-zA-Z0-9_\-!@#$%^&*]{32,})['"]?'''
+tags = ["jwt", "secret", "authentication"]
+
+[[rules]]
+description = "Detect Railway/Heroku environment variables"
+id = "railway-env-vars"
+regex = '''(?i)(railway|heroku)[_-]?(api|token)[_-]?key\s*[:=]\s*['"]?([a-zA-Z0-9_\-]{20,})['"]?'''
+tags = ["platform", "api-key"]
+
+[[rules]]
+description = "Detect Stripe API keys"
+id = "stripe-api-key"
+regex = '''(?i)stripe[_-]?(api|secret)[_-]?key\s*[:=]\s*['"]?(sk_live_[a-zA-Z0-9]{24,})['"]?'''
+tags = ["stripe", "payment", "api-key"]
+
+# Entropy threshold for detecting high-entropy strings
+[allowlist.commits]
+# Ignore specific commits if needed (e.g., initial imports with test data)
+# Add commit SHAs here if needed
+# commits = [
+#   "abc1234567890abcdef1234567890abcdef12345",
+# ]
+
+# Stop words that indicate something is NOT a secret
+[allowlist.stopwords]
+stopwords = [
+  "example",
+  "sample",
+  "test",
+  "demo",
+  "fake",
+  "dummy",
+  "placeholder",
+  "template",
+  "xxxxx",
+]

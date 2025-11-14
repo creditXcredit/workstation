@@ -86,7 +86,15 @@ We classify vulnerabilities using the following levels:
    - Use `npm audit fix` to automatically fix vulnerabilities
    - Monitor for security advisories
 
-6. **Access Control**
+6. **Secret Scanning (Automated)**
+   - Gitleaks automatically scans for exposed secrets on every push/PR
+   - Secrets detected in PRs will block merging until resolved
+   - Daily scheduled scans ensure no secrets slip through
+   - View detailed guide: [SECRET_SCANNING.md](SECRET_SCANNING.md)
+   - All findings appear in GitHub Security tab
+   - Free MIT-licensed tool, no authentication required
+
+7. **Access Control**
    - Implement proper role-based access control (RBAC)
    - Use principle of least privilege
    - Regularly review and revoke unused tokens
@@ -186,6 +194,47 @@ app.use(cors({
 - [ ] Regular security audits scheduled
 - [ ] Incident response plan documented
 - [ ] Backup and recovery procedures tested
+
+## Automated Security Scanning
+
+### Secret Scanning with Gitleaks
+
+The repository has automated secret scanning enabled using **Gitleaks** (MIT License, free).
+
+**What it does:**
+- Scans every commit for exposed secrets (API keys, tokens, credentials)
+- Blocks pull requests that contain secrets
+- Reports findings to GitHub Security tab
+- Runs on push, pull requests, and daily schedule
+
+**How it helps:**
+- ✅ Prevents accidental exposure of credentials
+- ✅ Catches secrets before they reach production
+- ✅ No manual intervention required
+- ✅ Free and high quality (16k+ GitHub stars)
+
+**For detailed information:**
+- See [SECRET_SCANNING.md](SECRET_SCANNING.md) for comprehensive guide
+- Check GitHub Security tab for current alerts
+- Review `.github/workflows/secret-scan.yml` for configuration
+
+**Detected secret types:**
+- AWS Access Keys, Secret Keys
+- GitHub Personal Access Tokens
+- Database connection strings
+- API keys (Stripe, Twilio, SendGrid, etc.)
+- Private SSH keys
+- JWT secrets
+- OAuth tokens
+- Generic high-entropy secrets
+
+**When secrets are detected:**
+1. Workflow fails and PR is blocked
+2. Alert created in GitHub Security tab
+3. PR comment explains remediation steps
+4. Repository maintainers are notified
+
+**Cost:** Free (MIT License, no authentication or payment required)
 
 ## Disclosure Policy
 

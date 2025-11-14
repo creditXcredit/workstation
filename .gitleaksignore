@@ -1,0 +1,12 @@
+# Gitleaks ignore file
+# Add specific strings or patterns that are false positives
+
+# AWS Documentation Examples
+AKIAIOSFODNN7EXAMPLE
+wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+
+# Test secrets used in CI/CD
+test-secret-for-ci
+
+# Example JWT secrets from documentation
+your-secure-32-character-minimum-secret-key
