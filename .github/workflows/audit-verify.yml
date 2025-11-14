@@ -128,7 +128,7 @@ jobs:
           fetch-depth: 0
       
       - name: Download verification report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: verification-report
           path: .
@@ -183,7 +183,7 @@ jobs:
     
     steps:
       - name: Download verification report
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: verification-report
           path: .
