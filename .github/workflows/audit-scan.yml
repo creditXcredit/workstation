@@ -115,6 +115,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for Gitleaks
       
       - name: Setup Node.js
         uses: actions/setup-node@v6
@@ -131,6 +133,12 @@ jobs:
           echo "Running npm security audit..."
           npm audit --json > npm-audit-report.json || true
           npm audit || true
+      
+      - name: Run Gitleaks secret scan (Free)
+        continue-on-error: true
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Initialize CodeQL (Free)
         uses: github/codeql-action/init@v4
@@ -149,6 +157,7 @@ jobs:
           name: security-scan-results
           path: |
             npm-audit-report.json
+            results.sarif
           retention-days: 7
 
   dependency-check:
@@ -301,7 +310,7 @@ jobs:
           
           echo "## Analysis Stages Completed" >> scan-summary.md
           echo "- ✓ Static Analysis (ESLint, TypeScript)" >> scan-summary.md
-          echo "- ✓ Security Scanning (npm audit, CodeQL)" >> scan-summary.md
+          echo "- ✓ Security Scanning (npm audit, CodeQL, Gitleaks)" >> scan-summary.md
           echo "- ✓ Dependency Health Check" >> scan-summary.md
           echo "- ✓ Configuration Validation" >> scan-summary.md
           echo "- ✓ Test Coverage Analysis" >> scan-summary.md
@@ -332,7 +341,7 @@ jobs:
             
             **Analysis Completed:**
             - ✓ Static Code Analysis
-            - ✓ Security Scanning
+            - ✓ Security Scanning (npm audit, CodeQL, Gitleaks)
             - ✓ Dependency Health Check
             - ✓ Configuration Validation
             - ✓ Test Coverage
