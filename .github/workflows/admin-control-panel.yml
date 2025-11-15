@@ -1,0 +1,191 @@
+name: Admin Control Panel
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Select Action'
+        required: true
+        type: choice
+        options:
+          - Health Check
+          - Generate Demo Token
+          - View API Documentation
+          - Check System Status
+      
+      # Token generation inputs
+      userId:
+        description: 'User ID (optional - for custom token)'
+        required: false
+        type: string
+      
+      userRole:
+        description: 'User Role (optional - for custom token)'
+        required: false
+        type: choice
+        options:
+          - user
+          - admin
+        default: user
+
+jobs:
+  execute-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup info
+        run: |
+          echo "🎯 Executing: ${{ github.event.inputs.action }}"
+          echo "👤 Triggered by: ${{ github.actor }}"
+          echo "⏰ Time: $(date)"
+      
+      - name: Execute Health Check
+        if: github.event.inputs.action == 'Health Check'
+        run: |
+          echo "### 🏥 Health Check" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ secrets.RAILWAY_URL }}" ]; then
+            echo "Checking health at ${{ secrets.RAILWAY_URL }}/health"
+            RESPONSE=$(curl -s -w "\nHTTP_CODE:%{http_code}" ${{ secrets.RAILWAY_URL }}/health || echo "ERROR: Connection failed")
+            
+            HTTP_CODE=$(echo "$RESPONSE" | grep "HTTP_CODE:" | cut -d':' -f2)
+            BODY=$(echo "$RESPONSE" | grep -v "HTTP_CODE:")
+            
+            echo "**Status Code:** $HTTP_CODE" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo "$BODY" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Application is healthy!" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ Health check failed" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "⚠️ RAILWAY_URL secret not configured" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "To use this feature:" >> $GITHUB_STEP_SUMMARY
+            echo "1. Go to repository Settings > Secrets and variables > Actions" >> $GITHUB_STEP_SUMMARY
+            echo "2. Add new secret: RAILWAY_URL" >> $GITHUB_STEP_SUMMARY
+            echo "3. Value: Your Railway deployment URL (e.g., https://your-app.railway.app)" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Generate Demo Token
+        if: github.event.inputs.action == 'Generate Demo Token'
+        run: |
+          echo "### 🔑 Demo Token Generation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ secrets.RAILWAY_URL }}" ]; then
+            echo "Generating demo token..."
+            RESPONSE=$(curl -s ${{ secrets.RAILWAY_URL }}/auth/demo-token)
+            
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo "$RESPONSE" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Token generated successfully!" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Usage:**" >> $GITHUB_STEP_SUMMARY
+            echo '```bash' >> $GITHUB_STEP_SUMMARY
+            echo 'curl -H "Authorization: Bearer YOUR_TOKEN" ${{ secrets.RAILWAY_URL }}/api/protected' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ RAILWAY_URL secret not configured" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Generate Custom Token
+        if: github.event.inputs.userId != ''
+        run: |
+          echo "### 🔐 Custom Token Generation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**User ID:** ${{ github.event.inputs.userId }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Role:** ${{ github.event.inputs.userRole }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ secrets.RAILWAY_URL }}" ]; then
+            RESPONSE=$(curl -s -X POST ${{ secrets.RAILWAY_URL }}/auth/token \
+              -H "Content-Type: application/json" \
+              -d "{\"userId\":\"${{ github.event.inputs.userId }}\",\"role\":\"${{ github.event.inputs.userRole }}\"}")
+            
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            echo "$RESPONSE" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Custom token generated!" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ RAILWAY_URL secret not configured" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: View API Documentation
+        if: github.event.inputs.action == 'View API Documentation'
+        run: |
+          echo "### 📚 API Documentation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Available Documentation:**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. 📖 [API Reference](https://github.com/${{ github.repository }}/blob/main/API.md)" >> $GITHUB_STEP_SUMMARY
+          echo "2. 🏗️ [Architecture](https://github.com/${{ github.repository }}/blob/main/ARCHITECTURE.md)" >> $GITHUB_STEP_SUMMARY
+          echo "3. 🖼️ [Interface Solutions](https://github.com/${{ github.repository }}/blob/main/INTERFACE_SOLUTIONS.md)" >> $GITHUB_STEP_SUMMARY
+          echo "4. 🚀 [Deployment Guide](https://github.com/${{ github.repository }}/blob/main/DEPLOYMENT.md)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -n "${{ secrets.RAILWAY_URL }}" ]; then
+            echo "**Live API Endpoints:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Health: ${{ secrets.RAILWAY_URL }}/health" >> $GITHUB_STEP_SUMMARY
+            echo "- Demo Token: ${{ secrets.RAILWAY_URL }}/auth/demo-token" >> $GITHUB_STEP_SUMMARY
+            echo "- API Docs (if enabled): ${{ secrets.RAILWAY_URL }}/api-docs" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Check System Status
+        if: github.event.inputs.action == 'Check System Status'
+        run: |
+          echo "### 📊 System Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Repository info
+          echo "**Repository:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Name: ${{ github.repository }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Last commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Deployment status
+          if [ -n "${{ secrets.RAILWAY_URL }}" ]; then
+            echo "**Deployment:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Railway URL: ${{ secrets.RAILWAY_URL }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: Checking..." >> $GITHUB_STEP_SUMMARY
+            
+            if curl -s --connect-timeout 5 ${{ secrets.RAILWAY_URL }}/health > /dev/null; then
+              echo "- Health: ✅ Online" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "- Health: ❌ Offline or unreachable" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "**Deployment:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Status: Not configured (RAILWAY_URL secret missing)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Workflow Info:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Triggered by: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Run ID: ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Timestamp: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Final Summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 💡 Tips" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- To use this control panel effectively, add your RAILWAY_URL as a repository secret" >> $GITHUB_STEP_SUMMARY
+          echo "- Generate custom tokens by providing a User ID in the workflow inputs" >> $GITHUB_STEP_SUMMARY
+          echo "- For UI options, see [INTERFACE_SOLUTIONS.md](https://github.com/${{ github.repository }}/blob/main/INTERFACE_SOLUTIONS.md)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run completed at:** $(date)" >> $GITHUB_STEP_SUMMARY
