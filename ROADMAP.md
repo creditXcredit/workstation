@@ -1217,6 +1217,616 @@ We welcome community input on priorities and features!
 
 ---
 
+# 🤖 Multi-Agent Build Orchestration Plan
+
+**Total Agents Required:** 6 specialized coding agents  
+**Total Estimated Time:** 4-6 hours (with parallel execution where possible)  
+**Handoff Strategy:** Sequential with verification gates
+
+***
+
+## 🎯 AGENT TEAM STRUCTURE
+
+### Team Composition
+
+| Agent # | Role | Primary Skills | Duration | Dependencies |
+|---------|------|---------------|----------|--------------|
+| **Agent 1** | TypeScript API Architect | Express, TypeScript, REST | 45 min | None |
+| **Agent 2** | Go Backend Engineer | Go, Chromedp, Concurrency | 60 min | Agent 1 (API contract) |
+| **Agent 3** | Database & Orchestration | SQL, Workflow engines, DAG | 45 min | Agent 2 (data models) |
+| **Agent 4** | Integration Specialist | Slack SDK, Webhooks, OAuth | 45 min | Agent 1, 2, 3 |
+| **Agent 5** | DevOps & Containerization | Docker, Railway, CI/CD | 45 min | Agent 1, 2 |
+| **Agent 6** | QA & Documentation | Testing, Docs, Examples | 60 min | All agents |
+
+---
+
+## 📋 SEQUENTIAL BUILD PLAN
+
+### 🔷 AGENT 1: TypeScript API Architect
+
+**Repository:** `creditXcredit/workstation`  
+**Branch:** `feature/automation-api`  
+**Estimated Time:** 45 minutes
+
+#### Responsibilities
+1. ✅ Extend existing Express API with automation routes
+2. ✅ Create Ollama HTTP client service
+3. ✅ Add request validation schemas
+4. ✅ Update environment configuration
+5. ✅ Write unit tests for new routes
+
+#### Deliverables
+```
+workstation/
+├── src/
+│   ├── services/
+│   │   └── ollamaClient.ts       # NEW: HTTP client for Go backend
+│   ├── routes/
+│   │   └── automation.ts         # NEW: /api/automation/* routes
+│   ├── middleware/
+│   │   └── validateWorkflow.ts   # NEW: Workflow validation
+│   └── types/
+│       └── automation.ts         # NEW: TypeScript interfaces
+├── tests/
+│   └── automation.test.ts        # NEW: Route tests
+└── .env.example                  # UPDATED: Add OLLAMA_URL
+```
+
+#### Acceptance Criteria
+- [ ] All existing tests pass (94%+ coverage maintained)
+- [ ] New routes respond with 200/401/400 appropriately
+- [ ] JWT authentication enforced on automation endpoints
+- [ ] Ollama client handles connection errors gracefully
+- [ ] TypeScript compiles without errors
+
+#### Handoff Artifact
+```json
+{
+  "api_contract": {
+    "base_url": "http://localhost:3000/api/automation",
+    "endpoints": [
+      "POST /workflows",
+      "GET /executions/:id",
+      "GET /agents"
+    ],
+    "ollama_backend_url": "http://localhost:11434",
+    "expected_requests": [
+      "POST /api/v2/workflows/execute",
+      "GET /api/v2/executions/:id"
+    ]
+  }
+}
+```
+
+**Verification Command:**
+```bash
+cd workstation
+npm test
+npm run build
+curl http://localhost:3000/api/automation/agents \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+***
+
+### 🔶 AGENT 2: Go Backend Engineer
+
+**Repository:** `creditXcredit/localBrowserAutomation`  
+**Branch:** `feature/browser-automation`  
+**Estimated Time:** 60 minutes  
+**Depends On:** Agent 1 (API contract)
+
+#### Responsibilities
+1. ✅ Create browser automation agent (chromedp)
+2. ✅ Implement workflow executor
+3. ✅ Add API routes matching Agent 1's contract
+4. ✅ Preserve all existing Ollama functionality
+5. ✅ Write integration tests
+
+#### Deliverables
+```
+localBrowserAutomation/
+├── automation/
+│   ├── agents/
+│   │   ├── browser.go           # NEW: Browser automation
+│   │   ├── registry.go          # NEW: Agent registry
+│   │   └── browser_test.go      # NEW: Tests
+│   ├── orchestrator/
+│   │   ├── engine.go            # NEW: Workflow engine
+│   │   ├── executor.go          # NEW: Task executor
+│   │   └── engine_test.go       # NEW: Tests
+│   └── api/
+│       ├── routes.go            # NEW: /api/v2/* routes
+│       └── handlers.go          # NEW: Request handlers
+├── go.mod                       # UPDATED: Add chromedp
+└── main.go                      # UPDATED: Register new routes
+```
+
+#### Acceptance Criteria
+- [ ] Existing Ollama endpoints still work (`/api/generate`, `/api/chat`)
+- [ ] Browser agent can navigate and extract text
+- [ ] New `/api/v2/` routes respond correctly
+- [ ] All tests pass with Go 1.24
+- [ ] No breaking changes to existing code
+
+#### Handoff Artifact
+```json
+{
+  "implemented_agents": [
+    {
+      "name": "browser",
+      "capabilities": ["navigate", "extract", "screenshot", "click"],
+      "input_schema": {
+        "url": "string",
+        "selector": "string"
+      }
+    }
+  ],
+  "api_endpoints": [
+    "POST /api/v2/workflows/execute",
+    "GET /api/v2/executions/:id",
+    "GET /api/v2/agents"
+  ],
+  "database_requirements": [
+    "workflows table",
+    "executions table",
+    "tasks table"
+  ]
+}
+```
+
+**Verification Command:**
+```bash
+cd localBrowserAutomation
+go test ./automation/...
+go build .
+./ollama serve &
+curl http://localhost:11434/api/v2/agents
+```
+
+***
+
+### 🔷 AGENT 3: Database & Orchestration Engineer
+
+**Repository:** `creditXcredit/localBrowserAutomation`  
+**Branch:** `feature/browser-automation` (continue from Agent 2)  
+**Estimated Time:** 45 minutes  
+**Depends On:** Agent 2 (data models)
+
+#### Responsibilities
+1. ✅ Create SQLite schema (workflows, executions, tasks)
+2. ✅ Implement database repositories
+3. ✅ Add migration system
+4. ✅ Build dependency graph resolver
+5. ✅ Add parallel task execution
+
+#### Deliverables
+```
+localBrowserAutomation/automation/
+├── db/
+│   ├── schema.sql               # NEW: Full database schema
+│   ├── migrations/
+│   │   └── 001_initial.sql      # NEW: Initial migration
+│   ├── connection.go            # NEW: DB connection pool
+│   ├── repositories/
+│   │   ├── workflow.go          # NEW: Workflow CRUD
+│   │   ├── execution.go         # NEW: Execution CRUD
+│   │   └── task.go              # NEW: Task CRUD
+│   └── migrate.go               # NEW: Migration runner
+└── orchestrator/
+    ├── dependency.go            # NEW: DAG resolver
+    ├── parallel.go              # NEW: Parallel executor
+    └── state.go                 # NEW: State machine
+```
+
+#### Acceptance Criteria
+- [ ] Database creates without errors
+- [ ] Workflows persist correctly
+- [ ] Executions track status changes
+- [ ] Dependencies resolve in correct order
+- [ ] Parallel tasks execute concurrently
+- [ ] Rollback works for failed executions
+
+#### Handoff Artifact
+```json
+{
+  "database_schema": {
+    "tables": ["workflows", "executions", "tasks", "agents"],
+    "migration_version": "001",
+    "sqlite_file": "./ollama.db"
+  },
+  "orchestrator_features": {
+    "dependency_resolution": true,
+    "parallel_execution": true,
+    "error_recovery": true,
+    "max_parallel_tasks": 5
+  }
+}
+```
+
+**Verification Command:**
+```bash
+cd localBrowserAutomation
+sqlite3 ollama.db < automation/db/schema.sql
+go test ./automation/db/...
+go test ./automation/orchestrator/...
+```
+
+***
+
+### 🔶 AGENT 4: Integration Specialist
+
+**Repository:** `creditXcredit/localBrowserAutomation`  
+**Branch:** `feature/browser-automation` (continue)  
+**Estimated Time:** 45 minutes  
+**Depends On:** Agent 1, 2, 3
+
+#### Responsibilities
+1. ✅ Implement Slack Bolt integration
+2. ✅ Add slash command handlers (`/workflow`, `/status`)
+3. ✅ Build progress notification system
+4. ✅ Add webhook trigger endpoint
+5. ✅ Create example workflow templates
+
+#### Deliverables
+```
+localBrowserAutomation/automation/
+├── slack/
+│   ├── bolt.go                  # NEW: Slack app init
+│   ├── commands.go              # NEW: Command handlers
+│   ├── actions.go               # NEW: Interactive actions
+│   ├── messages.go              # NEW: Message formatting
+│   └── progress.go              # NEW: Progress updates
+├── webhooks/
+│   ├── handler.go               # NEW: Webhook endpoint
+│   └── validator.go             # NEW: Signature validation
+└── templates/
+    ├── web-scraping.yaml        # NEW: Example workflow
+    ├── form-filling.yaml        # NEW: Example workflow
+    └── price-monitoring.yaml    # NEW: Example workflow
+```
+
+#### Acceptance Criteria
+- [ ] Slack bot responds to `/workflow` command
+- [ ] Progress updates appear in Slack thread
+- [ ] Webhooks trigger workflows
+- [ ] Example workflows execute successfully
+- [ ] Slack signature validation works
+
+#### Handoff Artifact
+```json
+{
+  "slack_integration": {
+    "commands": ["/workflow", "/status", "/logs"],
+    "events": ["message", "app_mention"],
+    "installation_url": "https://slack.com/oauth/v2/authorize?..."
+  },
+  "webhook_endpoint": "/webhooks/{uuid}",
+  "example_workflows": 3
+}
+```
+
+**Verification Command:**
+```bash
+# Slack command test
+curl -X POST http://localhost:11434/slack/commands \
+  -d "command=/workflow&text=scrape-example"
+
+# Webhook test
+curl -X POST http://localhost:11434/webhooks/test-uuid \
+  -H "X-Signature: ..." \
+  -d '{"trigger": "webhook"}'
+```
+
+***
+
+### 🔷 AGENT 5: DevOps & Containerization Engineer
+
+**Repository:** Both (`workstation` + `localBrowserAutomation`)  
+**Branch:** `feature/deployment`  
+**Estimated Time:** 45 minutes  
+**Depends On:** Agent 1, 2
+
+#### Responsibilities
+1. ✅ Create Docker Compose for local development
+2. ✅ Build multi-stage Dockerfile for Railway
+3. ✅ Configure CI/CD pipelines
+4. ✅ Set up environment variable management
+5. ✅ Create deployment documentation
+
+#### Deliverables
+```
+creditXcredit/ (monorepo root)
+├── docker-compose.yml           # NEW: Multi-service orchestration
+├── docker-compose.dev.yml       # NEW: Development overrides
+├── Dockerfile.railway           # NEW: Production build
+├── start.sh                     # NEW: Startup script
+├── .github/workflows/
+│   ├── workstation-ci.yml       # UPDATED: Add integration tests
+│   └── automation-ci.yml        # NEW: Go backend tests
+├── railway.json                 # NEW: Railway config
+└── DEPLOYMENT.md                # NEW: Deployment guide
+```
+
+#### Acceptance Criteria
+- [ ] `docker-compose up` starts both services
+- [ ] Services can communicate internally
+- [ ] Railway deployment succeeds
+- [ ] Environment variables load correctly
+- [ ] Health checks pass for both services
+- [ ] CI/CD runs all tests before deploy
+
+#### Handoff Artifact
+```json
+{
+  "deployment": {
+    "local": "docker-compose up",
+    "production": "railway up",
+    "health_checks": [
+      "http://localhost:3000/health",
+      "http://localhost:11434/health"
+    ]
+  },
+  "environment_variables": {
+    "required": ["JWT_SECRET", "OLLAMA_URL"],
+    "optional": ["SLACK_BOT_TOKEN", "WEBHOOK_SECRET"]
+  }
+}
+```
+
+**Verification Command:**
+```bash
+# Local test
+docker-compose up -d
+docker-compose ps
+curl http://localhost:3000/health
+curl http://localhost:11434/health
+
+# Railway test
+railway login
+railway up
+railway logs
+```
+
+***
+
+### 🔶 AGENT 6: QA & Documentation Engineer
+
+**Repository:** Both repositories  
+**Branch:** Continue from all previous agents  
+**Estimated Time:** 60 minutes  
+**Depends On:** All agents (1-5)
+
+#### Responsibilities
+1. ✅ Write end-to-end integration tests
+2. ✅ Create comprehensive documentation
+3. ✅ Build example workflows and tutorials
+4. ✅ Generate API reference documentation
+5. ✅ Create troubleshooting guides
+6. ✅ Final verification checklist
+
+#### Deliverables
+```
+workstation/
+├── docs/
+│   ├── API_AUTOMATION.md        # NEW: Automation API docs
+│   ├── EXAMPLES.md              # NEW: Workflow examples
+│   └── TROUBLESHOOTING.md       # NEW: Common issues
+└── tests/
+    └── e2e/
+        └── workflow.test.ts     # NEW: End-to-end tests
+
+localBrowserAutomation/
+├── docs/
+│   ├── BROWSER_AUTOMATION.md    # NEW: Browser agent guide
+│   ├── WORKFLOW_SYNTAX.md       # NEW: YAML syntax
+│   ├── SLACK_SETUP.md           # NEW: Slack integration
+│   └── ARCHITECTURE.md          # UPDATED: System diagram
+├── integration/
+│   ├── workflow_test.go         # NEW: Full workflow test
+│   ├── slack_test.go            # NEW: Slack integration test
+│   └── e2e_test.go              # NEW: Cross-service test
+└── examples/
+    ├── simple-scraper/
+    ├── form-automation/
+    └── price-monitoring/
+```
+
+#### Acceptance Criteria
+- [ ] All integration tests pass
+- [ ] Documentation complete and accurate
+- [ ] Example workflows execute successfully
+- [ ] API reference auto-generated
+- [ ] Troubleshooting guide covers common errors
+- [ ] README updated with quick start
+
+#### Handoff Artifact
+```json
+{
+  "test_coverage": {
+    "workstation": "94%+",
+    "automation": "85%+",
+    "integration": "100%"
+  },
+  "documentation": {
+    "guides": 7,
+    "examples": 3,
+    "api_reference": true
+  },
+  "verification": {
+    "all_tests_passing": true,
+    "deployment_working": true,
+    "examples_tested": true
+  }
+}
+```
+
+**Verification Command:**
+```bash
+# Run all tests
+cd workstation && npm test
+cd ../localBrowserAutomation && go test ./...
+
+# E2E test
+cd integration
+./run-e2e-tests.sh
+
+# Example workflow
+curl -X POST http://localhost:3000/api/automation/workflows \
+  -H "Authorization: Bearer $TOKEN" \
+  -d @examples/simple-scraper/workflow.yaml
+```
+
+***
+
+## 🔄 HANDOFF PROTOCOL
+
+### Between Each Agent
+
+```mermaid
+graph LR
+    A[Agent N Completes] --> B{Tests Pass?}
+    B -->|Yes| C[Create Handoff Artifact]
+    C --> D[Update Shared State File]
+    D --> E[Tag Repository]
+    E --> F[Agent N+1 Starts]
+    B -->|No| G[Fix Issues]
+    G --> A
+```
+
+### Shared State File (`.agent-state.json`)
+```json
+{
+  "current_agent": 2,
+  "completed_agents": [1],
+  "artifacts": {
+    "agent_1": {
+      "api_contract": { /* ... */ },
+      "branch": "feature/automation-api",
+      "commit": "abc123",
+      "tests_passing": true
+    }
+  },
+  "blockers": [],
+  "notes": "TypeScript API ready for Go integration"
+}
+```
+
+***
+
+## ⚡ PARALLEL EXECUTION OPPORTUNITIES
+
+### Phase 1: Foundation (Sequential)
+- **Agent 1** → **Agent 2** (must be sequential)
+
+### Phase 2: Features (Partial Parallel)
+```
+Agent 2 (Go Backend)
+    ↓
+    ├─→ Agent 3 (Database) ─┐
+    │                        ├─→ Agent 5 (DevOps)
+    └─→ Agent 4 (Integrations)─┘
+```
+
+### Phase 3: Finalization (Sequential)
+- **Agent 6** (QA/Docs) - must be last
+
+**Total Time with Parallelization:** 4 hours instead of 6
+
+***
+
+## 📊 PROGRESS TRACKING
+
+### Dashboard Metrics
+```
+┌─────────────────────────────────────────────┐
+│ Build Progress: 83% (5/6 agents complete)   │
+├─────────────────────────────────────────────┤
+│ ✅ Agent 1: TypeScript API      (DONE)      │
+│ ✅ Agent 2: Go Backend          (DONE)      │
+│ ✅ Agent 3: Database/Orchestr.  (DONE)      │
+│ ✅ Agent 4: Integrations        (DONE)      │
+│ ✅ Agent 5: DevOps              (DONE)      │
+│ 🔄 Agent 6: QA/Docs             (IN PROGRESS)│
+├─────────────────────────────────────────────┤
+│ Tests: 487/487 passing                      │
+│ Coverage: 92%                                │
+│ Deployment: ✅ Railway                       │
+└─────────────────────────────────────────────┘
+```
+
+***
+
+## 🚨 CRITICAL DEPENDENCIES
+
+### Cannot Proceed Without:
+1. **Agent 2** needs Agent 1's API contract
+2. **Agent 3** needs Agent 2's data models
+3. **Agent 4** needs Agent 1, 2, 3 completed
+4. **Agent 6** needs all agents (1-5) completed
+
+### Can Work in Parallel:
+- **Agent 3** + **Agent 4** (after Agent 2)
+- **Agent 5** (after Agent 1, 2)
+
+***
+
+## ✅ FINAL ACCEPTANCE CHECKLIST
+
+```bash
+#!/bin/bash
+# final-verification.sh
+
+echo "🔍 Running Final Verification..."
+
+# 1. TypeScript tests
+cd workstation
+npm test || exit 1
+
+# 2. Go tests
+cd ../localBrowserAutomation
+go test ./... || exit 1
+
+# 3. Docker build
+docker-compose build || exit 1
+
+# 4. Integration test
+docker-compose up -d
+sleep 10
+curl -f http://localhost:3000/health || exit 1
+curl -f http://localhost:11434/health || exit 1
+
+# 5. Example workflow
+TOKEN=$(curl -X POST http://localhost:3000/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test"}' | jq -r '.token')
+
+curl -X POST http://localhost:3000/api/automation/workflows \
+  -H "Authorization: Bearer $TOKEN" \
+  -d @examples/simple-scraper.yaml || exit 1
+
+echo "✅ All verifications passed!"
+```
+
+***
+
+## 📝 SUMMARY
+
+**Total Agents:** 6  
+**Sequential Time:** 6 hours  
+**Parallel Time:** 4 hours  
+**Recommended:** Run with 3 agents in parallel (Agents 3, 4, 5 after Agent 2)
+
+**Execution Plan:**
+1. Agent 1 (45 min)
+2. Agent 2 (60 min)
+3. **Parallel:** Agents 3, 4, 5 (45 min each, 45 min total)
+4. Agent 6 (60 min)
+
+**Total Wall Clock Time:** ~3.5 hours with parallelization
+
+---
+
 **Last Updated**: 2024-11-15  
 **Version**: 1.0.0  
 **Maintained by**: stackconsult team
