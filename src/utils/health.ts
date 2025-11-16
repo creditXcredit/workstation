@@ -19,8 +19,17 @@ export function getHealthStatus(): HealthStatus {
   const usedMemory = memoryUsage.heapUsed;
   const memoryPercentage = (usedMemory / totalMemory) * 100;
 
+  // Consider the service healthy unless memory is critically high (>95%)
+  // This is more appropriate for health checks as 90% is still operational
+  let status: 'ok' | 'degraded' | 'error' = 'ok';
+  if (memoryPercentage > 98) {
+    status = 'error';
+  } else if (memoryPercentage > 95) {
+    status = 'degraded';
+  }
+
   return {
-    status: memoryPercentage > 90 ? 'degraded' : 'ok',
+    status,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     memory: {
