@@ -29,16 +29,33 @@ This is an autonomous GitHub Coding Agent that operates within repositories to b
 - Security best practices
 - CI/CD with GitHub Actions
 
+### 4. Complete User Experience (MANDATORY)
+- **Never build backend-only solutions**
+- **Always include web dashboard** for data visualization
+- **Production-ready UI/UX** with responsive design
+- **Real-time updates** via WebSocket
+- **Export capabilities** (CSV, JSON, Excel)
+- **Dark/light mode** for user preference
+- **Mobile-friendly** responsive layouts
+- **Accessibility features** (ARIA, keyboard nav)
+- **No pseudo code or examples** - production code only
+- **Containerized deployment** with Docker
+
 ## Agent Capabilities
 
 ### Project Building
 **What it builds:**
-- Complete TypeScript/JavaScript projects
+- Complete TypeScript/JavaScript projects with WEB DASHBOARDS
 - Browser automation systems (Playwright)
 - Web scraping tools with fallback selectors
-- Data extraction pipelines
+- Data extraction pipelines with visualization
 - API wrappers and integrations
 - Automated workflows with GitHub Actions
+- **Production web applications with UI/UX** (Express, EJS, Tailwind CSS)
+- **Data visualization dashboards** (Chart.js for graphs)
+- **Real-time updates** (WebSocket for live notifications)
+- **Export functionality** (CSV, JSON, Excel)
+- **Docker containers** (for easy deployment)
 
 **Technology Stack (FREE):**
 - Playwright v1.40+ (browser automation)
@@ -47,6 +64,12 @@ This is an autonomous GitHub Coding Agent that operates within repositories to b
 - ESLint v8.0+ (linting)
 - Node.js 18+ (runtime)
 - GitHub Actions (CI/CD)
+- **Express.js v4.18+ (web server)**
+- **EJS v3.1+ (templating)**
+- **Tailwind CSS v3.0+ (responsive styling)**
+- **Chart.js v4.4+ (data visualization)**
+- **Socket.io v4.6+ (real-time updates)**
+- **Docker (containerization)**
 
 **Optional BYOK:**
 - OpenAI API (code generation)
@@ -279,13 +302,19 @@ jobs:
 - Price history tracking (SQLite)
 - Automated alerts on price changes
 - GitHub Actions scheduling (every 6 hours)
-- CSV export for analysis
+- **WEB DASHBOARD** with interactive charts
+- **Real-time notifications** via WebSocket
+- **CSV/JSON/Excel export** for analysis
+- **Responsive design** for mobile/tablet/desktop
 
 **FREE Stack:**
 - Playwright (scraping)
 - SQLite (data storage)
 - GitHub Actions (scheduling)
 - Gmail SMTP (email notifications)
+- **Express.js (web server)**
+- **Chart.js (price trend visualization)**
+- **Tailwind CSS (responsive UI)**
 
 **Optional BYOK:**
 - SendGrid (email service)
@@ -301,12 +330,18 @@ jobs:
 - Rate limiting and delays
 - User agent rotation
 - Screenshot capture
-- JSON/CSV export
+- **WEB DASHBOARD** for viewing scraped data
+- **Interactive filters** and search
+- **JSON/CSV/Excel export**
+- **Real-time scraping status** updates
 
 **FREE Stack:**
 - Playwright (browser automation)
 - TypeScript (type safety)
 - Jest (testing)
+- **Express.js (web interface)**
+- **EJS (templating)**
+- **Socket.io (real-time updates)**
 
 ### Template 3: Market Research Tool
 **Purpose:** Aggregate data from multiple sources
@@ -316,12 +351,18 @@ jobs:
 - Content extraction
 - Sentiment analysis (FREE with natural library)
 - Data aggregation
-- Report generation
+- **WEB DASHBOARD** with analytics
+- **Interactive charts** showing trends
+- **Report generation** (PDF/Excel)
+- **Export functionality**
 
 **FREE Stack:**
 - Playwright (search & scraping)
 - natural (NLP/sentiment)
 - Node.js (processing)
+- **Express.js (web server)**
+- **Chart.js (data visualization)**
+- **Docker (containerization)**
 
 ### Template 4: Real Estate Property Monitor
 **Purpose:** Track property listings from Zillow and Redfin with automated alerts
@@ -334,28 +375,48 @@ jobs:
 - GitHub Actions scheduling (every 2 hours)
 - SQLite database (file-based, committed to repo)
 - Search criteria configuration
+- **PRODUCTION WEB DASHBOARD** at localhost:3000
+- **Real-time property updates** via WebSocket
+- **Interactive filters** (price, location, beds/baths, type)
+- **Price trend charts** showing market changes
+- **Export to CSV/JSON/Excel** with one click
+- **Responsive mobile design** with dark mode
+- **Docker containerization** for easy deployment
 
 **FREE Stack:**
 - Playwright (property scraping)
 - SQLite (data persistence)
 - GitHub Actions (scheduling every 2 hours)
 - Nodemailer with Gmail SMTP (email alerts)
+- **Express.js (web server)**
+- **EJS (templating engine)**
+- **Tailwind CSS (responsive styling)**
+- **Chart.js (price trend charts)**
+- **Socket.io (real-time notifications)**
+- **Docker (container deployment)**
 
 **Optional BYOK:**
 - Twilio (SMS alerts - $15 free trial, then user provides own key)
 - SendGrid (email service)
 - Slack (team notifications)
 
-**Project Structure:**
+**Complete Project Structure:**
 ```
 projects/real-estate-monitor/
 ├── package.json
 ├── tsconfig.json
 ├── .env.example
+├── docker-compose.yml          # Container orchestration
+├── Dockerfile                  # Container image
 ├── README.md
 ├── src/
-│   ├── index.ts
+│   ├── index.ts                # Scraper entry point
+│   ├── server.ts               # Web server (NEW)
 │   ├── types/index.ts
+│   ├── api/                    # REST API (NEW)
+│   │   ├── properties.ts       # Property listings API
+│   │   ├── alerts.ts           # Alert management
+│   │   └── export.ts           # CSV/JSON/Excel export
 │   ├── scrapers/
 │   │   ├── base-scraper.ts
 │   │   ├── zillow.ts
@@ -367,14 +428,31 @@ projects/real-estate-monitor/
 │   └── utils/
 │       ├── logger.ts
 │       └── retry.ts
+├── views/                      # Web UI (NEW)
+│   ├── dashboard.ejs           # Main dashboard
+│   ├── property-detail.ejs     # Property details
+│   └── partials/
+│       ├── header.ejs
+│       ├── nav.ejs
+│       └── footer.ejs
+├── public/                     # Static assets (NEW)
+│   ├── css/styles.css
+│   ├── js/
+│   │   ├── dashboard.js        # Dashboard interactions
+│   │   ├── charts.js           # Chart.js integration
+│   │   └── realtime.js         # WebSocket client
+│   └── images/
 ├── data/
 │   ├── search-config.json      # User search criteria
 │   └── properties.db           # SQLite database
 ├── tests/
-│   └── scrapers.test.ts
+│   ├── scrapers.test.ts
+│   ├── api.test.ts             # API endpoint tests (NEW)
+│   └── services.test.ts
 └── .github/
     └── workflows/
-        └── monitor-properties.yml
+        ├── monitor-properties.yml
+        └── deploy.yml          # Deploy workflow (NEW)
 ```
 
 **Search Configuration Example:**
