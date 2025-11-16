@@ -1,4 +1,9 @@
-# stackBrowserAgent
+# stackBrowserAgent → workstation
+
+**Current Phase**: JWT Authentication Service (Phase 0) ✅  
+**Future Vision**: Comprehensive Browser Automation Platform (Phases 1-5)
+
+> 📍 **About the Names**: This repository is `workstation` (our future vision) containing `stackBrowserAgent` code (Phase 0 foundation). This is intentional - see [PROJECT_IDENTITY.md](./PROJECT_IDENTITY.md) for details on our evolution roadmap.
 
 Browser Agent with JWT Authentication and Railway Deployment
 
