@@ -1,17 +1,18 @@
-# Agent #17: AI-Powered Project Builder
+# Agent #17: AI-Powered Project Builder with Browser Automation
 
 ## Purpose
-Build a GitHub Coding Agent that generates comprehensive, production-ready project prompts following a "free before paid" philosophy with BYOK (Bring Your Own Key) integrations.
+Build a GitHub Coding Agent that generates comprehensive, production-ready project prompts following a "free before paid" philosophy with BYOK (Bring Your Own Key) integrations. Now includes advanced browser automation capabilities for web scraping, search, and data extraction.
 
 ## Architecture
 - **Type**: Node.js-based with TypeScript
 - **Runtime**: Node.js 18+
 - **Dependencies**: Playwright, Jest, TypeScript, ESLint
 - **Philosophy**: Free open-source tools first, optional BYOK for premium features
+- **New Capabilities**: Web search, form filling, element clicking, data extraction
 
 ## What This Agent Does
 
-Agent #17 creates detailed project prompts that other AI agents (like GitHub Copilot) can execute to build complete, production-ready applications. It follows these core principles:
+Agent #17 creates detailed project prompts that other AI agents (like GitHub Copilot) can execute to build complete, production-ready applications. **Now enhanced with browser automation capabilities** for web scraping, searching, and data extraction. It follows these core principles:
 
 1. **Free Before Paid**: Always use free, open-source tools as defaults
 2. **BYOK Optional**: Premium services require user-provided API keys
@@ -101,8 +102,76 @@ None required for core functionality. BYOK services need user-provided keys:
 ```bash
 cd agents/agent17
 npm install
+npx playwright install chromium  # Install browser
 npm test          # Run tests
 npm run build     # Compile TypeScript
+```
+
+### Using Browser Automation Features (NEW)
+
+```typescript
+import Agent17 from './src/index.js';
+
+const agent = new Agent17({ headless: true, logLevel: 'info' });
+await agent.initialize();
+
+// Web Search (FREE)
+const searchResults = await agent.search({
+  query: 'best price tracking tools',
+  searchEngine: 'google',
+  maxResults: 10
+});
+
+// Multi-Engine Search (FREE)
+const multiResults = await agent.multiSearch(
+  'competitor pricing strategies',
+  ['google', 'bing', 'duckduckgo']
+);
+
+// Click Element (FREE)
+await agent.clickElement({
+  url: 'https://example.com',
+  selector: '#buy-now-button',
+  waitAfterClick: 2000
+});
+
+// Fill Form (FREE)
+await agent.fillForm({
+  url: 'https://example.com/contact',
+  fields: {
+    '#name': 'John Doe',
+    '#email': 'john@example.com',
+    '#message': 'Hello!'
+  },
+  submitSelector: '#submit-button'
+});
+
+// Extract Data (FREE)
+const data = await agent.extractData({
+  url: 'https://example.com/product',
+  selectors: {
+    price: '.product-price',
+    title: 'h1.product-title',
+    rating: '.star-rating'
+  },
+  takeScreenshot: true
+});
+
+// Extract with Fallback Selectors (FREE)
+const reliableData = await agent.extractWithFallback(
+  'https://example.com/product',
+  {
+    price: [
+      '[data-testid="price"]',
+      '.price-value',
+      '#product-price',
+      '.pricing span'
+    ]
+  }
+);
+
+// Close when done
+await agent.close();
 ```
 
 ### Generate a Project Prompt
@@ -317,3 +386,392 @@ For issues or questions:
 ---
 
 **Remember**: This agent prioritizes free, open-source solutions. BYOK services are always optional enhancements, never requirements.
+
+---
+
+## 🆕 Browser Automation Capabilities
+
+Agent #17 now includes powerful browser automation features built on Playwright (FREE).
+
+### Available Tools
+
+#### 1. Web Search (FREE)
+Search across Google, Bing, or DuckDuckGo:
+```typescript
+const results = await agent.search({
+  query: 'best web scraping tools 2024',
+  searchEngine: 'google',
+  maxResults: 10
+});
+```
+
+**Multi-Engine Search**:
+```typescript
+const aggregated = await agent.multiSearch(
+  'competitor analysis tools',
+  ['google', 'bing', 'duckduckgo']
+);
+// Returns deduplicated results from all engines
+```
+
+#### 2. Click Elements (FREE)
+Automate button clicks and navigation:
+```typescript
+await agent.clickElement({
+  url: 'https://example.com/products',
+  selector: '#view-details-btn',
+  waitAfterClick: 2000  // Wait 2 seconds after click
+});
+```
+
+#### 3. Fill Forms (FREE)
+Automatically fill and submit forms:
+```typescript
+await agent.fillForm({
+  url: 'https://example.com/signup',
+  fields: {
+    '#username': 'testuser',
+    '#email': 'test@example.com',
+    '#password': 'SecurePass123',
+    '#terms-checkbox': true  // Checkbox
+  },
+  submitSelector: '#signup-button',
+  waitAfterSubmit: 3000
+});
+```
+
+**Supported Field Types**:
+- Text inputs
+- Textareas
+- Select dropdowns
+- Checkboxes
+- Radio buttons
+
+#### 4. Extract Data (FREE)
+Extract structured data from web pages:
+```typescript
+const productData = await agent.extractData({
+  url: 'https://example.com/product/123',
+  selectors: {
+    title: 'h1.product-name',
+    price: '.price-current',
+    rating: '.product-rating',
+    reviews: '.review-count',
+    availability: '.stock-status'
+  },
+  extractMultiple: {
+    reviews: false,  // Extract single element
+    features: true   // Extract all matching elements
+  },
+  takeScreenshot: true,
+  fullPageScreenshot: false
+});
+```
+
+#### 5. Extract with Fallback (FREE)
+Use multiple selector strategies for reliability:
+```typescript
+const reliableExtraction = await agent.extractWithFallback(
+  'https://amazon.com/dp/B08L5VN58M',
+  {
+    price: [
+      '[data-testid="price-whole"]',    // Best
+      '[aria-label*="price"]',           // Good
+      '#priceblock_ourprice',            // Okay
+      '.a-price .a-offscreen'            // Fallback
+    ],
+    title: [
+      '#productTitle',
+      'h1.product-title',
+      '.product-name'
+    ]
+  }
+);
+// Tries each selector in order until one works
+```
+
+#### 6. Navigate & Screenshot (FREE)
+Simple navigation and screenshots:
+```typescript
+// Navigate
+const page = await agent.navigate('https://example.com');
+console.log(page.url, page.title);
+
+// Screenshot
+const screenshot = await agent.screenshot(
+  'https://example.com',
+  { fullPage: true, path: './screenshot.png' }
+);
+```
+
+### Browser Manager Features
+
+The `BrowserManager` class provides:
+- **Page Pooling**: Reuse browser pages for performance
+- **Automatic Retry**: Built-in retry logic with exponential backoff
+- **Error Handling**: Graceful degradation on failures
+- **Resource Management**: Automatic cleanup of browser resources
+- **User Agent Spoofing**: Avoid bot detection
+- **Network Interception**: Modify requests/responses (advanced)
+
+### Selector Strategies
+
+Agent #17 follows best practices for reliable web scraping:
+
+**Recommended Selector Hierarchy**:
+1. **data-testid** (most reliable, rarely changes)
+2. **aria-label** (accessible, semantic, stable)
+3. **id** (unique but may change)
+4. **class + structure** (use as fallback only)
+
+**Example**:
+```typescript
+// Good: Multiple fallbacks
+const priceSelectors = [
+  '[data-testid="price"]',
+  '[aria-label*="price"]',
+  '#product-price',
+  '.price-value'
+];
+
+// Bad: Single brittle selector
+const badSelector = '.container > div:nth-child(3) > span.text-lg';
+```
+
+### Error Handling
+
+All tools include automatic retry with exponential backoff:
+
+```typescript
+// Automatically retries up to 3 times
+const result = await agent.search({
+  query: 'test query',
+  searchEngine: 'google'
+});
+
+// Custom retry configuration via utility
+import { withRetry } from './src/utils/retry.js';
+
+await withRetry(
+  async () => {
+    // Your code here
+  },
+  maxRetries: 5,
+  baseDelay: 2000
+);
+```
+
+### Performance Optimization
+
+**Page Pooling**:
+```typescript
+const manager = new BrowserManager({ maxPages: 10 });
+
+// Pages are automatically reused
+const page1 = await manager.getPage();
+await manager.releasePage(page1);  // Returns to pool
+
+const page2 = await manager.getPage();  // Reuses page1
+```
+
+**Parallel Execution**:
+```typescript
+// Run multiple searches in parallel
+const [google, bing, duck] = await Promise.all([
+  agent.search({ query: 'test', searchEngine: 'google' }),
+  agent.search({ query: 'test', searchEngine: 'bing' }),
+  agent.search({ query: 'test', searchEngine: 'duckduckgo' })
+]);
+```
+
+### Use Cases
+
+**1. Competitor Price Tracking**:
+```typescript
+const competitors = ['amazon.com', 'bestbuy.com', 'walmart.com'];
+
+for (const site of competitors) {
+  const price = await agent.extractWithFallback(
+    `https://${site}/product/${productId}`,
+    {
+      price: [
+        '[data-testid="price"]',
+        '.product-price',
+        '#price'
+      ]
+    }
+  );
+  console.log(`${site}: ${price.data.extracted.price}`);
+}
+```
+
+**2. Market Research**:
+```typescript
+// Search multiple engines for comprehensive results
+const research = await agent.multiSearch(
+  'AI coding assistants comparison',
+  ['google', 'bing', 'duckduckgo']
+);
+
+// Extract details from top results
+for (const result of research.data.results.slice(0, 5)) {
+  const details = await agent.extractData({
+    url: result.url,
+    selectors: {
+      mainContent: 'article',
+      publishDate: 'time',
+      author: '.author-name'
+    }
+  });
+}
+```
+
+**3. Form Automation**:
+```typescript
+// Automate repetitive form submissions
+const testData = [
+  { name: 'User 1', email: 'user1@test.com' },
+  { name: 'User 2', email: 'user2@test.com' }
+];
+
+for (const data of testData) {
+  await agent.fillForm({
+    url: 'https://example.com/signup',
+    fields: {
+      '#name': data.name,
+      '#email': data.email
+    },
+    submitSelector: '#submit'
+  });
+}
+```
+
+### Integration with Project Prompts
+
+The browser capabilities are designed to be included in generated project prompts:
+
+```typescript
+// Agent #17 can now generate prompts that include:
+// - Web scraping with fallback selectors
+// - Multi-engine search capabilities
+// - Form automation for testing
+// - Data extraction pipelines
+// - Screenshot comparison tools
+
+// Example: Generated prompt includes browser automation
+const prompt = await generatePrompt({
+  template: 'competitor-tracker',
+  includeBrowserTools: true,  // NEW!
+  searchEngines: ['google', 'bing'],
+  extractionStrategies: ['fallback', 'multi-selector']
+});
+```
+
+### Security Considerations
+
+**User Agent Rotation**:
+```typescript
+const manager = new BrowserManager({
+  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+});
+```
+
+**Rate Limiting**:
+```typescript
+// Add delays between requests
+await agent.search({ query: 'query 1' });
+await new Promise(resolve => setTimeout(resolve, 2000));
+await agent.search({ query: 'query 2' });
+```
+
+**Headless vs Headed**:
+```typescript
+// Development: headed mode
+const devAgent = new Agent17({ headless: false });
+
+// Production: headless mode (faster, uses less resources)
+const prodAgent = new Agent17({ headless: true });
+```
+
+### Troubleshooting
+
+**Issue: Selector not found**
+```typescript
+// Solution: Use fallback selectors
+await agent.extractWithFallback(url, {
+  price: ['#price', '.product-price', '[data-price]']
+});
+```
+
+**Issue: Page load timeout**
+```typescript
+// Solution: Increase timeout
+const manager = new BrowserManager({ timeout: 60000 });
+```
+
+**Issue: Bot detection**
+```typescript
+// Solution: Use realistic user agent and delays
+const manager = new BrowserManager({
+  userAgent: 'Mozilla/5.0 ...',  // Real browser UA
+});
+await page.waitForTimeout(Math.random() * 2000 + 1000);
+```
+
+### Advanced Features (Future)
+
+Coming soon:
+- [ ] JavaScript execution in page context
+- [ ] Cookie management
+- [ ] Network request interception
+- [ ] Proxy support
+- [ ] Captcha solving integration (BYOK)
+- [ ] PDF generation
+- [ ] Video recording
+
+---
+
+## API Reference
+
+### Agent17 Class
+
+```typescript
+class Agent17 {
+  constructor(config?: {
+    headless?: boolean;
+    logLevel?: 'info' | 'warn' | 'error' | 'debug';
+  });
+
+  // Initialization
+  async initialize(): Promise<void>;
+  async close(): Promise<void>;
+
+  // Search Tools
+  async search(input: SearchInput): Promise<ToolResult>;
+  async multiSearch(query: string, engines?: string[]): Promise<ToolResult>;
+
+  // Interaction Tools
+  async clickElement(input: ClickElementInput): Promise<ToolResult>;
+  async fillForm(input: FillFormInput): Promise<ToolResult>;
+
+  // Extraction Tools
+  async extractData(input: ExtractDataInput): Promise<ToolResult>;
+  async extractWithFallback(url: string, selectors: Record<string, string[]>): Promise<ToolResult>;
+
+  // Navigation Tools
+  async navigate(url: string): Promise<{ success: boolean; url: string; title: string }>;
+  async screenshot(url: string, options?: ScreenshotOptions): Promise<Buffer>;
+}
+```
+
+### Type Definitions
+
+See `src/types/index.ts` for complete type definitions including:
+- `ClickElementInput`
+- `FillFormInput`
+- `SearchInput`
+- `ExtractDataInput`
+- `ToolResult`
+- `SearchResult`
+- And more...
+
