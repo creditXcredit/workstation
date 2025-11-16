@@ -1,0 +1,218 @@
+name: Docker Image Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_version:
+        description: 'Target version to rollback to (commit SHA, tag, or "previous")'
+        required: true
+        type: string
+      environment:
+        description: 'Target environment for rollback'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      confirm_rollback:
+        description: 'Type "ROLLBACK" to confirm'
+        required: true
+        type: string
+
+jobs:
+  validate-rollback:
+    name: Validate Rollback Request
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.image_tag }}
+      image_exists: ${{ steps.check.outputs.exists }}
+    
+    steps:
+      - name: Validate confirmation
+        run: |
+          if [ "${{ inputs.confirm_rollback }}" != "ROLLBACK" ]; then
+            echo "❌ Rollback not confirmed. You must type 'ROLLBACK' to proceed."
+            exit 1
+          fi
+          echo "✅ Rollback confirmed"
+      
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for finding previous commits
+      
+      - name: Resolve target version
+        id: resolve
+        run: |
+          TARGET="${{ inputs.target_version }}"
+          
+          if [ "$TARGET" == "previous" ]; then
+            # Get the previous commit SHA
+            CURRENT_SHA=$(git rev-parse HEAD)
+            PREVIOUS_SHA=$(git rev-parse HEAD~1)
+            echo "image_tag=$PREVIOUS_SHA" >> $GITHUB_OUTPUT
+            echo "📋 Resolved 'previous' to commit: $PREVIOUS_SHA"
+          else
+            # Use the provided version (could be SHA, tag, or branch)
+            echo "image_tag=$TARGET" >> $GITHUB_OUTPUT
+            echo "📋 Using specified version: $TARGET"
+          fi
+      
+      - name: Check if image exists
+        id: check
+        run: |
+          IMAGE_TAG="${{ steps.resolve.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          
+          # Try to get manifest (this checks if image exists)
+          if docker manifest inspect "${REGISTRY}:${IMAGE_TAG}" > /dev/null 2>&1; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Image exists in registry: ${REGISTRY}:${IMAGE_TAG}"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Image not found in registry: ${REGISTRY}:${IMAGE_TAG}"
+            echo ""
+            echo "💡 Available options:"
+            echo "  - Use a full commit SHA (e.g., 047b82e2e5674df8987724cdada3a5bb5127683c)"
+            echo "  - Use 'latest' for most recent build"
+            echo "  - Use 'previous' to rollback one commit"
+            echo "  - Check available images at: https://github.com/${{ github.repository }}/pkgs/container/workstation"
+            exit 1
+          fi
+      
+      - name: Get image metadata
+        run: |
+          IMAGE_TAG="${{ steps.resolve.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          
+          echo "### 🔍 Image Metadata" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Registry:** $REGISTRY" >> $GITHUB_STEP_SUMMARY
+          echo "**Tag:** $IMAGE_TAG" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Get image layers info
+          docker manifest inspect "${REGISTRY}:${IMAGE_TAG}" | \
+            jq -r '.layers[] | "- Layer: \(.digest)"' >> $GITHUB_STEP_SUMMARY || true
+
+  perform-rollback:
+    name: Perform Rollback
+    runs-on: ubuntu-latest
+    needs: validate-rollback
+    if: needs.validate-rollback.outputs.image_exists == 'true'
+    environment: ${{ inputs.environment }}
+    
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Pull target image
+        run: |
+          IMAGE_TAG="${{ needs.validate-rollback.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          
+          echo "📥 Pulling image: ${REGISTRY}:${IMAGE_TAG}"
+          docker pull "${REGISTRY}:${IMAGE_TAG}"
+          
+          echo "✅ Image pulled successfully"
+      
+      - name: Tag image for environment
+        run: |
+          IMAGE_TAG="${{ needs.validate-rollback.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          ENV_TAG="${{ inputs.environment }}-current"
+          
+          echo "🏷️ Tagging image for environment: ${ENV_TAG}"
+          docker tag "${REGISTRY}:${IMAGE_TAG}" "${REGISTRY}:${ENV_TAG}"
+          docker push "${REGISTRY}:${ENV_TAG}"
+          
+          echo "✅ Environment tag updated"
+      
+      - name: Create rollback backup
+        run: |
+          IMAGE_TAG="${{ needs.validate-rollback.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          BACKUP_TAG="${{ inputs.environment }}-rollback-$(date +%Y%m%d-%H%M%S)"
+          
+          echo "💾 Creating rollback backup: ${BACKUP_TAG}"
+          docker tag "${REGISTRY}:${IMAGE_TAG}" "${REGISTRY}:${BACKUP_TAG}"
+          docker push "${REGISTRY}:${BACKUP_TAG}"
+          
+          echo "✅ Backup created: ${BACKUP_TAG}"
+      
+      - name: Verify rollback
+        run: |
+          IMAGE_TAG="${{ needs.validate-rollback.outputs.image_tag }}"
+          REGISTRY="ghcr.io/${{ github.repository }}"
+          ENV_TAG="${{ inputs.environment }}-current"
+          
+          # Verify the tag was updated
+          PULLED_DIGEST=$(docker inspect "${REGISTRY}:${IMAGE_TAG}" --format='{{.Id}}')
+          ENV_DIGEST=$(docker inspect "${REGISTRY}:${ENV_TAG}" --format='{{.Id}}')
+          
+          if [ "$PULLED_DIGEST" == "$ENV_DIGEST" ]; then
+            echo "✅ Rollback verified successfully"
+            echo "Image digest matches: $PULLED_DIGEST"
+          else
+            echo "❌ Rollback verification failed"
+            echo "Expected: $PULLED_DIGEST"
+            echo "Got: $ENV_DIGEST"
+            exit 1
+          fi
+      
+      - name: Generate rollback summary
+        run: |
+          echo "### 🔄 Rollback Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Version:** ${{ needs.validate-rollback.outputs.image_tag }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "1. Monitor application health at your deployment endpoints" >> $GITHUB_STEP_SUMMARY
+          echo "2. Check logs for any errors or warnings" >> $GITHUB_STEP_SUMMARY
+          echo "3. Run smoke tests to verify functionality" >> $GITHUB_STEP_SUMMARY
+          echo "4. If issues persist, consider rolling back further or forward" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📦 Deployment Commands" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          echo "# Pull the rolled-back image" >> $GITHUB_STEP_SUMMARY
+          echo "docker pull ghcr.io/${{ github.repository }}:${{ inputs.environment }}-current" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "# Run the container" >> $GITHUB_STEP_SUMMARY
+          echo "docker run -d --name stackbrowseragent \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -p 3000:3000 \\" >> $GITHUB_STEP_SUMMARY
+          echo "  -e JWT_SECRET=\$JWT_SECRET \\" >> $GITHUB_STEP_SUMMARY
+          echo "  ghcr.io/${{ github.repository }}:${{ inputs.environment }}-current" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Useful Links" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- [View all images](https://github.com/${{ github.repository }}/pkgs/container/workstation)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Rollback documentation](https://github.com/${{ github.repository }}/blob/main/DOCKER_ROLLBACK_GUIDE.md)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Recovery procedures](https://github.com/${{ github.repository }}/blob/main/QUICK_RECOVERY_GUIDE.md)" >> $GITHUB_STEP_SUMMARY
+
+  notify-rollback:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [validate-rollback, perform-rollback]
+    if: always()
+    
+    steps:
+      - name: Send notification
+        run: |
+          if [ "${{ needs.perform-rollback.result }}" == "success" ]; then
+            echo "✅ Rollback completed successfully"
+            echo "Environment: ${{ inputs.environment }}"
+            echo "Version: ${{ needs.validate-rollback.outputs.image_tag }}"
+          else
+            echo "❌ Rollback failed or was cancelled"
+            echo "Check the workflow logs for details"
+          fi

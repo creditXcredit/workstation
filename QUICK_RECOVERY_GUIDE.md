@@ -1,133 +1,243 @@
 # Quick Recovery Guide
 
-## You Created Workstation from Scratch - Let's Restore It!
+## Overview
 
-Since you built the workstation workspace from scratch on your local machine and it was working (evidenced by container package 576679619), we can recover it.
+This guide provides rapid recovery procedures for critical incidents affecting the stackBrowserAgent application. With our comprehensive Docker image versioning and rollback system, most incidents can be resolved in under 5 minutes.
 
-## Best Recovery Method: From Your Local Machine
+## Emergency Recovery Matrix
 
-### Option A: If You Still Have Your Local Workspace
+| Incident Type | Recovery Time | Method |
+|--------------|---------------|---------|
+| Bad deployment | < 2 minutes | GitHub Actions Rollback Workflow |
+| Code bug | < 5 minutes | Docker Image Rollback |
+| Data issue | < 15 minutes | Database Restore + Rollback |
+| Full system failure | < 30 minutes | Complete System Restore |
 
-**This is the FASTEST method** - Use your original local files:
+---
+
+## 🚨 1-Minute Recovery: Automated Rollback (Recommended)
+
+### Using GitHub Actions (Easiest & Safest)
+
+1. **Go to Actions Tab**
+   - Navigate to: https://github.com/creditXcredit/workstation/actions
+   - Select "Docker Image Rollback" workflow
+
+2. **Run Workflow**
+   - Click "Run workflow"
+   - Choose target version:
+     - `previous` - Rollback to last commit
+     - Specific SHA - Rollback to exact version
+     - `latest` - Use most recent build
+   - Select environment: `production` or `staging`
+   - Type `ROLLBACK` to confirm
+   - Click "Run workflow"
+
+3. **Monitor Progress**
+   - Watch the workflow execution
+   - Review the summary when complete
+   - Verify health endpoints
+
+**Benefits:**
+- ✅ Automatic validation
+- ✅ Creates rollback backup  
+- ✅ Generates deployment commands
+- ✅ Full audit trail
+- ✅ No SSH access needed
+
+---
+
+## ⚡ 2-Minute Recovery: Manual Docker Rollback
+
+### Quick Rollback (Manual Method)
 
 ```bash
-# On your local machine where you created workstation from scratch
-cd /path/to/your/local/workstation
+# 1. Identify target version
+git log --oneline -10
 
-# Check what you have
-git remote -v
-git status
+# 2. Stop current container
+docker stop stackbrowseragent && docker rm stackbrowseragent
 
-# Option 1: Force push to restore main branch
-git push origin HEAD:main --force
+# 3. Pull and run specific version (replace SHA)
+ROLLBACK_SHA="047b82e2e5674df8987724cdada3a5bb5127683c"
+docker pull ghcr.io/creditxcredit/workstation:$ROLLBACK_SHA
 
-# Option 2: Push to a recovery branch first (safer)
-git checkout -b recovery/restore-original
-git push origin recovery/restore-original
+docker run -d --name stackbrowseragent \
+  -p 3000:3000 \
+  -e JWT_SECRET=$JWT_SECRET \
+  -e NODE_ENV=production \
+  --restart unless-stopped \
+  ghcr.io/creditxcredit/workstation:$ROLLBACK_SHA
 
-# Then merge via PR after review
+# 4. Verify deployment
+curl http://localhost:3000/health
 ```
 
-### Option B: Extract from Published Container
+### Find Available Versions
 
-If you don't have local files anymore, extract from your published container:
+**Option 1: Git History**
+```bash
+git log --pretty=format:"%h - %an, %ar : %s" --graph -10
+```
+
+**Option 2: Container Registry**
+- Visit: https://github.com/creditXcredit/workstation/pkgs/container/workstation
+
+**Option 3: GitHub API**
+```bash
+gh api repos/creditXcredit/workstation/commits --paginate | \
+  jq -r '.[] | "\(.sha[0:7]) - \(.commit.message)"' | head -10
+```
+
+---
+
+## 🔄 5-Minute Recovery: Git Revert + Rebuild
 
 ```bash
-# Run the recovery script (requires Docker and GitHub authentication)
-# For AMD64 (most common)
-./scripts/recover-from-container.sh amd64
+# 1. Identify and revert problematic commit
+git log --oneline --all
+git revert <commit-sha>
 
-# For ARM64 (M1/M2 Macs)
-./scripts/recover-from-container.sh arm64
+# 2. Push to trigger new build (takes 2-3 minutes)
+git push origin main
 
-# Or manually (AMD64 example):
-docker pull ghcr.io/creditxcredit/workstation/backend:copilot-fix-failing-ci-checks-4b31220@sha256:63e562307e19dcd7b6e976f1470ad7e14465b096fac1caeca0a85150a3cd04e0
-docker create --name temp-ws ghcr.io/creditxcredit/workstation/backend:copilot-fix-failing-ci-checks-4b31220@sha256:63e562307e19dcd7b6e976f1470ad7e14465b096fac1caeca0a85150a3cd04e0
-docker cp temp-ws:/app ./recovered-code
-docker rm temp-ws
+# 3. Monitor build at: https://github.com/creditXcredit/workstation/actions
 
-# Review recovered code
-cd recovered-code
-ls -la
-
-# Copy to repository root (backup first!)
+# 4. Once built, deploy new image
+docker pull ghcr.io/creditxcredit/workstation:latest
+docker stop stackbrowseragent && docker rm stackbrowseragent
+docker run -d --name stackbrowseragent \
+  -p 3000:3000 \
+  -e JWT_SECRET=$JWT_SECRET \
+  ghcr.io/creditxcredit/workstation:latest
 ```
 
-## What Happened?
+---
 
-1. ✅ **You created** workstation from scratch locally
-2. ✅ **You pushed** it to creditXcredit/workstation  
-3. ✅ **You built** container package 576679619
-4. ❌ **Something went wrong** - stackBrowserAgent code overwrote it
-5. 🔄 **Now recovering** - restoring your original work
+## 💾 15-Minute Recovery: Database Rollback
 
-## Current Repository Problem
+```bash
+# 1. Stop application
+docker stop stackbrowseragent
 
-**Wrong Code Present:**
-- Name: `stackbrowseragent` (JWT auth service)
-- Source: `stackconsult/stackBrowserAgent`
-- Not your original workstation code!
+# 2. Backup current state
+docker exec postgres pg_dump stackbrowseragent > /tmp/pre-restore-backup.sql
 
-**Correct Code Location:**
-- Container tag: `copilot-fix-failing-ci-checks-4b31220`
-- Architecture: linux/amd64, linux/arm64, or multi-arch
-- Your local machine: `/path/to/your/local/workstation`
+# 3. Restore from backup
+pg_restore -C -d postgres /backups/backup_<timestamp>.dump
 
-## Recovery Checklist
+# 4. Rollback to compatible application version
+docker pull ghcr.io/creditxcredit/workstation:<compatible-version>
 
-- [ ] Locate your original local workstation files
-- [ ] OR prepare to extract from container 576679619
-- [ ] Backup current (wrong) repository state
-- [ ] Restore correct workstation code
-- [ ] Verify package.json shows "workstation" not "stackbrowseragent"
-- [ ] Test the recovered code: `npm install && npm test`
-- [ ] Commit and push: `git commit -m "Restore original workstation code"`
+# 5. Restart application
+docker run -d --name stackbrowseragent \
+  -p 3000:3000 \
+  -e JWT_SECRET=$JWT_SECRET \
+  ghcr.io/creditxcredit/workstation:<compatible-version>
 
-## After Recovery
+# 6. Verify
+curl http://localhost:3000/health
+```
 
-1. **Verify it's your code:**
-   ```bash
-   cat package.json | grep name
-   # Should show "workstation" or similar, NOT "stackbrowseragent"
-   ```
+---
 
-2. **Test it works:**
-   ```bash
-   npm install
-   npm run build
-   npm test
-   ```
+## 🆘 30-Minute Recovery: Complete System Restore
 
-3. **Commit the restoration:**
-   ```bash
-   git add .
-   git commit -m "Restore original workstation code created from scratch"
-   git push origin HEAD
-   ```
+```bash
+# 1. Document current state
+docker ps -a > /tmp/container_state.txt
+git log --oneline -5 > /tmp/git_state.txt
 
-## Need Help?
+# 2. Clean slate
+docker stop $(docker ps -q) 2>/dev/null || true
+docker system prune -af
 
-If you can't find your local files:
-1. Check your local machine: `~/workstation`, `~/workspace`, `~/projects/workstation`
-2. Check recent git directories: `find ~ -name ".git" -type d | grep workstation`
-3. Use the container extraction: `./scripts/recover-from-container.sh`
+# 3. Checkout known good commit
+GOOD_SHA="047b82e2e5674df8987724cdada3a5bb5127683c"
+git fetch --all
+git checkout $GOOD_SHA
 
-The container definitely has your correct code since you built and published it!
+# 4. Rebuild environment
+npm ci && npm run build && npm test
 
-## Questions to Ask Yourself
+# 5. Restore database
+pg_restore -C -d postgres /backups/backup_latest.dump
 
-- Where on my local machine did I create the workstation from scratch?
-- Do I still have those files?
-- What was the last commit I made locally?
-- When did I push to GitHub and build the container?
+# 6. Deploy
+docker pull ghcr.io/creditxcredit/workstation:$GOOD_SHA
+docker run -d --name stackbrowseragent \
+  -p 3000:3000 \
+  -v /data:/data \
+  -e JWT_SECRET=$JWT_SECRET \
+  -e NODE_ENV=production \
+  --restart unless-stopped \
+  ghcr.io/creditxcredit/workstation:$GOOD_SHA
 
-## Summary
+# 7. Verify and monitor
+curl http://localhost:3000/health
+watch -n 10 'curl -s http://localhost:3000/health | jq'
+```
 
-Your original work exists in:
-1. 🖥️ **Your local machine** (if you haven't deleted it)
-2. 📦 **Container images** with tag `copilot-fix-failing-ci-checks-4b31220` (definitely has it)
-   - linux/amd64: `sha256:63e562307...`
-   - linux/arm64: `sha256:d6bfa9d27...`
-   - multi-arch: `sha256:7f762f3e4...`
+---
 
-Choose the easiest recovery path for you!
+## ✅ Post-Recovery Verification
+
+```bash
+# 1. Health check
+curl http://localhost:3000/health
+
+# 2. Authentication test
+TOKEN=$(curl -X POST http://localhost:3000/auth/generate \
+  -H "Content-Type: application/json" \
+  -d '{"userId":"test","role":"admin"}' | jq -r '.token')
+curl http://localhost:3000/auth/verify -H "Authorization: Bearer $TOKEN"
+
+# 3. Performance check
+time curl http://localhost:3000/health
+docker stats stackbrowseragent --no-stream
+
+# 4. Log analysis
+docker logs stackbrowseragent --tail 100 | grep -i error
+```
+
+---
+
+## 📊 Recovery Decision Tree
+
+```
+Is application down?
+├─ YES → 🚨 Use 1-Minute Automated Rollback
+│   └─ Still down? → Manual Docker Rollback
+└─ NO → Is functionality broken?
+    ├─ YES → Critical?
+    │   ├─ YES → 🚨 Automated Rollback
+    │   └─ NO → ⚡ Git Revert + Rebuild
+    └─ NO → Is data corrupted?
+        ├─ YES → 💾 Database Rollback
+        └─ NO → Monitor and document
+```
+
+---
+
+## 🔗 Quick Links
+
+- **Container Registry**: https://github.com/creditXcredit/workstation/pkgs/container/workstation
+- **GitHub Actions**: https://github.com/creditXcredit/workstation/actions
+- **Rollback Workflow**: https://github.com/creditXcredit/workstation/actions/workflows/docker-rollback.yml
+- **Commit History**: https://github.com/creditXcredit/workstation/commits/main
+- **Full Guides**: [DOCKER_ROLLBACK_GUIDE.md](./DOCKER_ROLLBACK_GUIDE.md) | [CONTAINER_VERSION_STRATEGY.md](./CONTAINER_VERSION_STRATEGY.md)
+
+---
+
+## 📋 Recovery Checklist
+
+- [ ] Issue detected and severity assessed
+- [ ] Current state documented (logs, screenshots)
+- [ ] Recovery method selected
+- [ ] Recovery procedure executed
+- [ ] Health checks verified
+- [ ] System monitored for 15+ minutes
+- [ ] Incident report created
+- [ ] Root cause analyzed
+- [ ] Prevention measures implemented
+- [ ] Team notified
