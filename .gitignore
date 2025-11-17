@@ -95,3 +95,7 @@ agents/agent12/intelligence/week-*-intelligence.json
 agents/*/node_modules/
 agents/*/dist/
 *.db
+
+# Agent Server
+agent-server/nodejs/node_modules/
+agent-server/nodejs/logs/*.log

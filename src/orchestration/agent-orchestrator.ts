@@ -67,7 +67,6 @@ export class AgentOrchestrator extends EventEmitter {
   private config: { minAccuracy: number; maxRetries: number; timeoutMs: number; enableAutoRecovery: boolean };
   
   constructor(config: OrchestratorConfig = {}) {
-  constructor(config: Record<string, unknown>) {
     super();
     this.agents = new Map();
     this.guardrails = [];
@@ -98,7 +97,6 @@ export class AgentOrchestrator extends EventEmitter {
         const accuracy = data.accuracy as number | undefined;
         return !accuracy || accuracy >= this.config.minAccuracy;
       },
-      check: (data: Record<string, unknown>) => !data.accuracy || (typeof data.accuracy === 'number' && data.accuracy >= this.config.minAccuracy),
       severity: 'critical',
       message: `Accuracy must be at least ${this.config.minAccuracy}%`
     });
