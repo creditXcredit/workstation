@@ -53,6 +53,7 @@ Deep dive into how Workstation works:
 API documentation and integrations:
 
 - [API Documentation](api/API.md) - Complete API reference
+- [Data Schemas](SCHEMAS.md) - ⭐ **JSON schemas for workflows, agents, and system components**
 - [Available Integrations](api/AVAILABLE_INTEGRATIONS.md) - Third-party integrations
 
 ## 📅 Project Continuity & History
@@ -144,7 +145,10 @@ Visual resources and examples:
 → [PROJECT_TIMELINE.md](../PROJECT_TIMELINE.md) → [DEVELOPMENT_PHASES.md](../DEVELOPMENT_PHASES.md)
 
 **Use the API**
-→ [API.md](api/API.md)
+→ [API.md](api/API.md) → [SCHEMAS.md](SCHEMAS.md)
+
+**Create workflows**
+→ [HOW_TO_USE_BROWSER_AGENT.md](guides/HOW_TO_USE_BROWSER_AGENT.md) → [SCHEMAS.md](SCHEMAS.md)
 
 **Contribute code**
 → [CONTRIBUTING.md](guides/CONTRIBUTING.md) → [BUILD.md](guides/BUILD.md)
