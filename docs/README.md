@@ -1,144 +1,173 @@
-# StackBrowserAgent Web Dashboard
+# 🖥️ Workstation Web Interfaces
 
-This is a simple, single-page web dashboard for the StackBrowserAgent API. It provides a user-friendly interface for managing JWT tokens and testing API endpoints.
+This directory contains the web interfaces for Workstation browser automation platform.
 
-## Features
+## 🎨 Available Interfaces
 
-- 🏥 **Health Check**: Monitor API status
-- 🔑 **Token Management**: Generate demo and custom JWT tokens
-- 🧪 **API Testing**: Test protected routes with tokens
-- 📚 **Documentation Links**: Quick access to all documentation
-- 🎨 **Modern UI**: Built with Alpine.js and DaisyUI
-- 📱 **Responsive**: Works on desktop and mobile
+### 1. Landing Page (`landing.html`)
+**Purpose:** Public-facing showcase and documentation hub
 
-## Quick Start
+**Features:**
+- Hero section with clear value proposition
+- Feature showcase with icons and descriptions
+- Use cases and examples
+- Quick start guide with code snippets
+- Documentation navigation
+- Call-to-action sections
 
-### Option 1: GitHub Pages (Recommended)
+**Best for:** First-time visitors, project overview, marketing
 
-1. **Enable GitHub Pages**:
-   - Go to your repository Settings
-   - Navigate to "Pages" in the sidebar
-   - Under "Source", select "Deploy from a branch"
-   - Choose `main` branch and `/docs` folder
-   - Click "Save"
+### 2. Simple Dashboard (`index.html`)
+**Purpose:** JWT authentication and API testing
 
-2. **Configure API URL**:
-   - Open `docs/index.html` in a text editor
-   - Find the line: `apiUrl: 'YOUR_RAILWAY_URL_HERE',`
-   - Replace with your Railway URL: `apiUrl: 'https://your-app.railway.app',`
-   - Commit and push changes
+**Features:**
+- Health check monitoring
+- JWT token generation (demo and custom)
+- API endpoint testing
+- JSON response viewer
+- Documentation links
 
-3. **Access Dashboard**:
-   - Your dashboard will be available at:
-   - `https://[your-username].github.io/[repo-name]/`
-   - Example: `https://creditxcredit.github.io/workstation/`
+**Best for:** Developers testing the API, token management
 
-### Option 2: Local Development
+### 3. Control Center (`workstation-control-center.html`)
+**Purpose:** Advanced workflow management
 
-1. **Open Locally**:
-   ```bash
-   # Open in browser
-   open docs/index.html
-   # or
-   firefox docs/index.html
-   # or
-   chrome docs/index.html
-   ```
+**Features:**
+- Workflow creation and editing
+- Execution monitoring
+- Task management
+- Real-time status updates
+- Advanced configuration
 
-2. **Configure API URL**:
-   - Edit `docs/index.html`
-   - Update the `apiUrl` variable with your Railway URL
+**Best for:** Power users, production workflow management
 
-3. **Use a Local Server** (optional, for CORS):
-   ```bash
-   # Python 3
-   cd docs
-   python3 -m http.server 8000
-   
-   # Node.js (with http-server)
-   npx http-server docs -p 8000
-   
-   # Then open http://localhost:8000
-   ```
+## 📁 Directory Structure
 
-## Configuration
-
-### Update API URL
-
-Edit `docs/index.html` and find this section:
-
-```javascript
-function dashboard() {
-  return {
-    // Configuration - UPDATE THIS WITH YOUR RAILWAY URL
-    apiUrl: 'YOUR_RAILWAY_URL_HERE', // e.g., 'https://your-app.railway.app'
+```
+docs/
+├── landing.html                     # Public landing page
+├── index.html                       # Simple dashboard
+├── workstation-control-center.html  # Advanced control center
+├── README.md                        # This file
+├── DOCUMENTATION_INDEX.md           # Complete doc navigation
+│
+├── guides/                          # User guides
+│   ├── HOW_TO_USE_BROWSER_AGENT.md
+│   ├── QUICKSTART.md
+│   └── ...
+│
+├── architecture/                    # System design docs
+│   ├── ARCHITECTURE.md
+│   ├── ROADMAP.md
+│   └── ...
+│
+├── api/                            # API documentation
+│   ├── API.md
+│   └── ...
+│
+├── archives/                       # Historical docs (83 files)
+│
+└── assets/                         # Visual resources
+    ├── screenshots/
+    └── diagrams/
 ```
 
-Replace `YOUR_RAILWAY_URL_HERE` with your actual Railway deployment URL.
+## 🚀 Quick Start
 
-### CORS Configuration
+### For GitHub Pages
 
-Make sure your Railway deployment allows requests from your GitHub Pages domain:
+1. **Enable GitHub Pages:**
+   - Repository Settings → Pages
+   - Source: Deploy from branch
+   - Branch: `main`, folder: `/docs`
+   - Save
 
-1. Update `.env` or Railway environment variables:
-   ```env
-   ALLOWED_ORIGINS=https://your-username.github.io,http://localhost:8000
+2. **Access your site:**
+   ```
+   https://[username].github.io/workstation/landing.html
    ```
 
-2. Or allow all origins during development (not recommended for production):
-   ```env
-   ALLOWED_ORIGINS=*
-   ```
+### For Local Development
 
-## Usage Guide
+```bash
+# Option 1: Open directly in browser
+open docs/landing.html
 
-### Health Check Tab
+# Option 2: Use a local server (recommended)
+cd docs
+python3 -m http.server 8000
+# Visit http://localhost:8000
 
-1. Click "Check Health" button
-2. View system status and timestamp
-3. Confirms API is online and accessible
+# Option 3: Use Node.js http-server
+npx http-server docs -p 8000
+```
 
-### Token Management Tab
+### Configuration
 
-#### Demo Token
-- Click "Generate Demo Token"
-- Automatically creates a token for user "demo-user"
-- Use for quick testing
+**For local development:**
 
-#### Custom Token
-- Enter a User ID (e.g., "john-doe")
-- Select a role (User or Admin)
-- Click "Generate"
-- Token is created with your custom data
+Edit the `apiUrl` in each HTML file:
 
-### Test API Tab
+```javascript
+// In landing.html, index.html, or workstation-control-center.html
+apiUrl: 'http://localhost:3000'
+```
 
-1. Paste a JWT token (or generate one first)
-2. Click "Test /api/protected" or "Test /api/agent/status"
-3. View the response in formatted JSON
-4. Success/error status is clearly indicated
+**For production/GitHub Pages:**
 
-### Documentation Tab
+```javascript
+apiUrl: 'https://your-railway-app.railway.app'
+```
 
-Quick links to all project documentation:
-- API Reference
-- Architecture
-- Interface Solutions
-- Deployment Guide
-- Security Documentation
+### CORS Setup
 
-## Technologies Used
+Add your GitHub Pages URL to the backend:
 
-- **Alpine.js**: Lightweight JavaScript framework (15kb)
-- **DaisyUI**: Beautiful Tailwind CSS components
-- **Tailwind CSS**: Utility-first CSS framework
-- **No Build Tools**: Works directly in browser via CDN
+```env
+# In .env file
+ALLOWED_ORIGINS=https://[username].github.io,http://localhost:8000
+```
 
-## Customization
+## 📖 Documentation
+
+### Complete Guides
+
+- [📚 Documentation Index](DOCUMENTATION_INDEX.md) - Complete navigation
+- [🚀 Getting Started Guide](../GETTING_STARTED.md) - Comprehensive onboarding
+- [🎯 START_HERE](../START_HERE.md) - 30-second quick start
+- [📘 Browser Agent Guide](guides/HOW_TO_USE_BROWSER_AGENT.md) - Complete usage
+- [🔌 API Reference](api/API.md) - API documentation
+- [🏗️ Architecture](architecture/ARCHITECTURE.md) - System design
+
+### By Category
+
+**User Guides:**
+- Quick starts (standard, integrated, production)
+- How-to guides
+- Deployment guides
+- Security guide
+- Monitoring guide
+
+**Architecture:**
+- System architecture
+- MCP architecture
+- Project roadmap
+- Future features
+
+**API:**
+- REST API reference
+- Available integrations
+
+**Archives:**
+- 83 historical implementation documents
+- Completion reports
+- Audit summaries
+
+## 🎨 Customization
 
 ### Change Theme
 
-Edit the `<html>` tag in `index.html`:
+Edit the HTML file's `<html>` tag:
 
 ```html
 <!-- Light theme (default) -->
@@ -147,89 +176,55 @@ Edit the `<html>` tag in `index.html`:
 <!-- Dark theme -->
 <html lang="en" data-theme="dark">
 
-<!-- Other themes: cupcake, bumblebee, emerald, corporate, synthwave, etc. -->
+<!-- Other DaisyUI themes -->
 <html lang="en" data-theme="synthwave">
 ```
 
-Available themes: https://daisyui.com/docs/themes/
+[Available themes](https://daisyui.com/docs/themes/)
 
-### Add New Features
+### Add Custom Styles
 
-The dashboard uses Alpine.js for reactivity. To add features:
+Add to the `<style>` section in each HTML file:
 
-1. Add HTML in the appropriate tab section
-2. Add methods to the `dashboard()` function
-3. Use Alpine.js directives (`x-data`, `x-show`, `@click`, etc.)
-
-Example - Add a new endpoint test:
-
-```html
-<button class="btn btn-primary" @click="testMyEndpoint">
-  Test My Endpoint
-</button>
-```
-
-```javascript
-async testMyEndpoint() {
-  await this.testEndpoint('/api/my-endpoint');
+```css
+.custom-class {
+  /* Your styles */
 }
 ```
 
-## Troubleshooting
+### Modify Features
 
-### Dashboard Shows "Not Connected"
+All interfaces use **Alpine.js** for reactivity. To add features:
 
-**Cause**: Cannot reach the API  
-**Solution**: 
-- Verify `apiUrl` is correctly set
-- Check Railway deployment is running
-- Verify CORS settings allow your domain
+1. Add HTML in the appropriate section
+2. Add methods to the Alpine.js data object
+3. Use Alpine directives (`x-data`, `@click`, etc.)
 
-### CORS Errors in Browser Console
+## 🔧 Troubleshooting
 
-**Cause**: API blocks requests from your domain  
-**Solution**: Add your GitHub Pages URL to `ALLOWED_ORIGINS` environment variable
+### "Not Connected" in Dashboard
 
-### Token Generation Fails
+**Cause:** Cannot reach API
 
-**Cause**: API endpoint issues or rate limiting  
-**Solution**:
-- Check API is running (Health Check tab)
-- Wait if rate limited (10 requests per 15 minutes)
-- Verify JWT_SECRET is set in Railway
+**Solutions:**
+- Verify `apiUrl` is correct
+- Check backend is running
+- Verify CORS settings
 
-### Buttons Don't Work
+### CORS Errors
 
-**Cause**: JavaScript not loading  
-**Solution**:
-- Check browser console for errors
-- Ensure Alpine.js CDN is accessible
-- Try clearing browser cache
+**Cause:** Origin not allowed
 
-## Security Notes
+**Solution:**
+Add your domain to `ALLOWED_ORIGINS` in backend `.env`
 
-⚠️ **Important Security Considerations**:
+### Token Issues
 
-1. **API URL**: It's okay to expose your Railway URL in the HTML file - it's a public API endpoint
-2. **JWT Secret**: Never put your JWT_SECRET in the HTML file
-3. **HTTPS**: Always use HTTPS in production (GitHub Pages provides this)
-4. **CORS**: Restrict ALLOWED_ORIGINS to only your GitHub Pages domain in production
+**Cause:** Invalid or expired token
 
-## Next Steps
+**Solutions:**
+- Generate new token
+- Check JWT_SECRET is set
+- Verify token hasn't expired (default: 24h)
 
-1. **Add Authentication**: Implement user login to restrict dashboard access
-2. **Add More Endpoints**: Extend dashboard to test all API endpoints
-3. **Add WebSocket**: Real-time updates for agent status
-4. **Add Charts**: Visualize metrics and usage statistics
-5. **Add Admin Features**: User management, configuration, etc.
-
-## Support
-
-For issues or questions:
-- Open an issue on GitHub
-- Check [INTERFACE_SOLUTIONS.md](../INTERFACE_SOLUTIONS.md) for alternative UI options
-- See [API.md](../API.md) for API documentation
-
-## License
-
-Same as parent project - ISC License
+### Styles Not Loading

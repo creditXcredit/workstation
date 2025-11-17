@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workstation - Browser Automation Platform</title>
+  <meta name="description" content="Privacy-first browser automation with JWT auth, workflow orchestration, and AI integration. Deploy locally or to Railway in minutes.">
+  
+  <!-- OpenGraph / Social Media Meta Tags -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://creditxcredit.github.io/workstation/">
+  <meta property="og:title" content="Workstation - Browser Automation Platform">
+  <meta property="og:description" content="Privacy-first browser automation with JWT auth, workflow orchestration, and AI integration. Zero cloud costs. Full control.">
+  <meta property="og:image" content="https://creditxcredit.github.io/workstation/assets/og-image.png">
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://creditxcredit.github.io/workstation/">
+  <meta name="twitter:title" content="Workstation - Browser Automation Platform">
+  <meta name="twitter:description" content="Privacy-first browser automation with JWT auth, workflow orchestration, and AI integration.">
+  <meta name="twitter:image" content="https://creditxcredit.github.io/workstation/assets/og-image.png">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+  
+  <!-- Alpine.js for interactivity -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+  
+  <!-- DaisyUI + Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <style>
+    [x-cloak] { display: none !important; }
+    .hero-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .card-hover {
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .card-hover:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    }
+    .fade-in {
+      animation: fadeIn 0.6s ease-in;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pulse-slow {
+      animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-base-200">
+  
+  <!-- Navigation -->
+  <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+    <div class="navbar-start">
+      <div class="dropdown">
+        <label tabindex="0" class="btn btn-ghost lg:hidden">
+          <i class="fas fa-bars text-xl"></i>
+        </label>
+        <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+          <li><a href="#features"><i class="fas fa-star mr-2"></i>Features</a></li>
+          <li><a href="#demo"><i class="fas fa-play mr-2"></i>Demo</a></li>
+          <li><a href="#docs"><i class="fas fa-book mr-2"></i>Docs</a></li>
+          <li><a href="https://github.com/creditXcredit/workstation" target="_blank"><i class="fab fa-github mr-2"></i>GitHub</a></li>
+        </ul>
+      </div>
+      <a href="#" class="btn btn-ghost text-xl">
+        <i class="fas fa-desktop mr-2"></i>
+        <span class="font-bold">Workstation</span>
+      </a>
+    </div>
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1">
+        <li><a href="#features"><i class="fas fa-star mr-2"></i>Features</a></li>
+        <li><a href="#demo"><i class="fas fa-play mr-2"></i>Demo</a></li>
+        <li><a href="#docs"><i class="fas fa-book mr-2"></i>Docs</a></li>
+      </ul>
+    </div>
+    <div class="navbar-end">
+      <a href="https://github.com/creditXcredit/workstation" target="_blank" class="btn btn-ghost btn-circle">
+        <i class="fab fa-github text-2xl"></i>
+      </a>
+      <a href="index.html" class="btn btn-primary ml-2">
+        <i class="fas fa-rocket mr-2"></i>Launch Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <div class="hero min-h-screen hero-gradient">
+    <div class="hero-content text-center text-white">
+      <div class="max-w-4xl">
+        <div class="mb-8">
+          <div class="badge badge-lg bg-white text-primary font-bold pulse-slow">
+            <i class="fas fa-sparkles mr-2"></i>Privacy-First Automation
+          </div>
+        </div>
+        <h1 class="text-6xl font-bold mb-6 drop-shadow-lg">
+          Browser Automation<br/>Made Simple
+        </h1>
+        <p class="text-2xl mb-8 opacity-90">
+          Local-first automation platform with JWT auth, workflow orchestration, and AI integration.
+          <br/>Zero cloud costs. Full control. Production-ready.
+        </p>
+        <div class="flex flex-wrap gap-4 justify-center">
+          <a href="#demo" class="btn btn-lg btn-white text-primary">
+            <i class="fas fa-play mr-2"></i>Try Live Demo
+          </a>
+          <a href="https://github.com/creditXcredit/workstation" target="_blank" class="btn btn-lg btn-outline border-white text-white hover:bg-white hover:text-primary">
+            <i class="fab fa-github mr-2"></i>View on GitHub
+          </a>
+          <a href="https://railway.app/template/stackbrowseragent" target="_blank" class="btn btn-lg btn-outline border-white text-white hover:bg-white hover:text-primary">
+            <i class="fas fa-cloud mr-2"></i>Deploy to Railway
+          </a>
+        </div>
+        <div class="mt-8 flex justify-center gap-8 text-sm opacity-75">
+          <div><i class="fas fa-shield-alt mr-2"></i>94% Test Coverage</div>
+          <div><i class="fas fa-lock mr-2"></i>Enterprise Security</div>
+          <div><i class="fas fa-docker mr-2"></i>Docker Ready</div>
+          <div><i class="fab fa-node-js mr-2"></i>TypeScript + Node.js</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features Section -->
+  <div id="features" class="py-20 bg-base-100">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold mb-4">Powerful Features</h2>
+        <p class="text-xl opacity-70">Everything you need for browser automation at scale</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-primary text-4xl mb-4">
+              <i class="fas fa-robot"></i>
+            </div>
+            <h3 class="card-title text-2xl">Browser Automation</h3>
+            <p class="opacity-70">Full Playwright integration with 7 core actions: navigate, click, type, extract text, screenshot, get content, and evaluate JavaScript.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">Playwright</div>
+              <div class="badge badge-secondary">Headless</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-secondary text-4xl mb-4">
+              <i class="fas fa-project-diagram"></i>
+            </div>
+            <h3 class="card-title text-2xl">Workflow Orchestration</h3>
+            <p class="opacity-70">Define multi-step workflows in JSON. Automatic retries, error handling, execution tracking, and variable substitution built-in.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">SQLite</div>
+              <div class="badge badge-secondary">REST API</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-accent text-4xl mb-4">
+              <i class="fas fa-lock"></i>
+            </div>
+            <h3 class="card-title text-2xl">JWT Authentication</h3>
+            <p class="opacity-70">Secure JWT auth with HS256/384/512 algorithms. Rate limiting, CORS protection, security headers, and GDPR-compliant logging.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">JWT</div>
+              <div class="badge badge-secondary">Helmet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-success text-4xl mb-4">
+              <i class="fas fa-database"></i>
+            </div>
+            <h3 class="card-title text-2xl">Data Persistence</h3>
+            <p class="opacity-70">SQLite for development, PostgreSQL-ready schema. Store workflows, track executions, and maintain task history with full CRUD operations.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">SQLite</div>
+              <div class="badge badge-secondary">Postgres</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-warning text-4xl mb-4">
+              <i class="fas fa-plug"></i>
+            </div>
+            <h3 class="card-title text-2xl">RESTful API</h3>
+            <p class="opacity-70">Complete API v2 with workflow management, execution control, and real-time status tracking. OpenAPI/Swagger documentation included.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">Express</div>
+              <div class="badge badge-secondary">TypeScript</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="card bg-base-200 shadow-xl card-hover">
+          <div class="card-body">
+            <div class="text-error text-4xl mb-4">
+              <i class="fas fa-rocket"></i>
+            </div>
+            <h3 class="card-title text-2xl">Easy Deployment</h3>
+            <p class="opacity-70">One-click Railway deployment, Docker containers with multi-platform support, or local development. GitHub Actions CI/CD included.</p>
+            <div class="card-actions justify-end mt-4">
+              <div class="badge badge-primary">Docker</div>
+              <div class="badge badge-secondary">Railway</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Use Cases Section -->
+  <div class="py-20 bg-base-200">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold mb-4">What Can You Build?</h2>
+        <p class="text-xl opacity-70">Real-world automation scenarios</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-search text-3xl text-primary mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">Web Scraping</h3>
+            <p class="opacity-70">Extract data from websites at scale with automatic retry and error handling.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-edit text-3xl text-secondary mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">Form Automation</h3>
+            <p class="opacity-70">Fill and submit forms automatically across multiple sites.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-vial text-3xl text-accent mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">E2E Testing</h3>
+            <p class="opacity-70">Run comprehensive browser tests with screenshots and reports.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-chart-line text-3xl text-success mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">Monitoring</h3>
+            <p class="opacity-70">Monitor websites for changes and receive automated alerts.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-camera text-3xl text-warning mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">Screenshot Service</h3>
+            <p class="opacity-70">Capture full-page or element screenshots programmatically.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-4 p-6 bg-base-100 rounded-lg shadow">
+          <i class="fas fa-database text-3xl text-error mt-1"></i>
+          <div>
+            <h3 class="text-xl font-bold mb-2">Data Collection</h3>
+            <p class="opacity-70">Gather information from multiple sources into structured datasets.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Start Section -->
+  <div id="demo" class="py-20 bg-base-100">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold mb-4">Get Started in 30 Seconds</h2>
+        <p class="text-xl opacity-70">Three simple steps to your first automation</p>
+      </div>
+      
+      <div class="max-w-3xl mx-auto">
+        <div class="steps steps-vertical lg:steps-horizontal w-full mb-12">
+          <div class="step step-primary">Install</div>
+          <div class="step step-primary">Configure</div>
+          <div class="step step-primary">Automate</div>
+        </div>
+
+        <div class="mockup-code bg-base-300 shadow-xl">
+          <pre data-prefix="$"><code>git clone https://github.com/creditXcredit/workstation.git</code></pre>
+          <pre data-prefix="$"><code>cd workstation && npm install</code></pre>
+          <pre data-prefix="$"><code>npm run dev</code></pre>
+          <pre data-prefix=">" class="text-success"><code>Server running on http://localhost:3000</code></pre>
+          <pre data-prefix="$" class="mt-4"><code>curl http://localhost:3000/auth/demo-token</code></pre>
+          <pre data-prefix=">" class="text-info"><code>{"token": "eyJhbGciOiJIUzI1NiIs..."}</code></pre>
+        </div>
+
+        <div class="text-center mt-8">
+          <a href="index.html" class="btn btn-primary btn-lg">
+            <i class="fas fa-rocket mr-2"></i>Launch Interactive Dashboard
+          </a>
+          <p class="mt-4 opacity-70">Or try the <a href="workstation-control-center.html" class="link link-primary">Advanced Control Center</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Documentation Section -->
+  <div id="docs" class="py-20 bg-base-200">
+    <div class="container mx-auto px-4">
+      <div class="text-center mb-16">
+        <h2 class="text-5xl font-bold mb-4">Comprehensive Documentation</h2>
+        <p class="text-xl opacity-70">Everything you need to succeed</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+        <a href="DOCUMENTATION_INDEX.md" class="card bg-base-100 shadow-xl card-hover">
+          <div class="card-body items-center text-center">
+            <i class="fas fa-list text-5xl text-primary mb-4"></i>
+            <h3 class="card-title">Documentation Index</h3>
+            <p class="opacity-70">Complete guide navigation</p>
+          </div>
+        </a>
+        
+        <a href="../START_HERE.md" class="card bg-base-100 shadow-xl card-hover">
+          <div class="card-body items-center text-center">
+            <i class="fas fa-play-circle text-5xl text-secondary mb-4"></i>
+            <h3 class="card-title">Start Here</h3>
+            <p class="opacity-70">Quick start guide</p>
+          </div>
+        </a>
+        
+        <a href="guides/HOW_TO_USE_BROWSER_AGENT.md" class="card bg-base-100 shadow-xl card-hover">
+          <div class="card-body items-center text-center">
+            <i class="fas fa-book text-5xl text-accent mb-4"></i>
+            <h3 class="card-title">User Guide</h3>
+            <p class="opacity-70">Complete usage manual</p>
+          </div>
+        </a>
+        
+        <a href="api/API.md" class="card bg-base-100 shadow-xl card-hover">
+          <div class="card-body items-center text-center">
+            <i class="fas fa-code text-5xl text-success mb-4"></i>
+            <h3 class="card-title">API Reference</h3>
+            <p class="opacity-70">Complete API docs</p>
+          </div>
+        </a>
+      </div>
+
+      <div class="text-center mt-12">
+        <a href="https://github.com/creditXcredit/workstation/tree/main/docs" target="_blank" class="btn btn-outline btn-lg">
+          <i class="fas fa-folder-open mr-2"></i>Browse All Documentation
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Section -->
+  <div class="py-20 bg-base-100">
+    <div class="container mx-auto px-4">
+      <div class="stats stats-vertical lg:stats-horizontal shadow w-full bg-base-200">
+        <div class="stat">
+          <div class="stat-figure text-primary">
+            <i class="fas fa-check-circle text-4xl"></i>
+          </div>
+          <div class="stat-title">Test Coverage</div>
+          <div class="stat-value text-primary">94%</div>
+          <div class="stat-desc">Comprehensive test suite</div>
+        </div>
+        
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <i class="fas fa-robot text-4xl"></i>
+          </div>
+          <div class="stat-title">Browser Actions</div>
+          <div class="stat-value text-secondary">7</div>
+          <div class="stat-desc">Core automation primitives</div>
+        </div>
+        
+        <div class="stat">
+          <div class="stat-figure text-accent">
+            <i class="fas fa-plug text-4xl"></i>
+          </div>
+          <div class="stat-title">API Endpoints</div>
+          <div class="stat-value text-accent">10+</div>
+          <div class="stat-desc">RESTful API v2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA Section -->
+  <div class="py-20 bg-base-200">
+    <div class="hero">
+      <div class="hero-content text-center">
+        <div class="max-w-2xl">
+          <h2 class="text-5xl font-bold mb-6">Ready to Automate?</h2>
+          <p class="text-xl mb-8 opacity-70">
+            Join developers using Workstation for privacy-first browser automation.
+            Open source, free forever, runs anywhere.
+          </p>
+          <div class="flex flex-wrap gap-4 justify-center">
+            <a href="https://github.com/creditXcredit/workstation" target="_blank" class="btn btn-primary btn-lg">
+              <i class="fab fa-github mr-2"></i>Star on GitHub
+            </a>
+            <a href="index.html" class="btn btn-secondary btn-lg">
+              <i class="fas fa-play mr-2"></i>Try Demo Now
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer footer-center p-10 bg-base-100 text-base-content">
+    <div>
+      <div class="grid grid-flow-col gap-4">
+        <a href="https://github.com/creditXcredit/workstation" target="_blank" class="link link-hover">
+          <i class="fab fa-github text-2xl"></i>
+        </a>
+        <a href="https://railway.app/template/stackbrowseragent" target="_blank" class="link link-hover">
+          <i class="fas fa-cloud text-2xl"></i>
+        </a>
+      </div>
+    </div>
+    <div>
+      <p>Built with ❤️ using TypeScript, Express, and Playwright</p>
+      <p class="opacity-50">ISC License • <a href="https://github.com/creditXcredit/workstation" class="link">View Source</a></p>
+    </div>
+  </footer>
+
+</body>
+</html>
