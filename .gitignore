@@ -90,3 +90,4 @@ agents/agent12/intelligence/week-*-intelligence.json
 # Agent dependencies
 agents/*/node_modules/
 agents/*/dist/
+*.db
