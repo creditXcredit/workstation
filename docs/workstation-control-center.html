@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Workstation Control Center - 21-Agent System</title>
+  <meta name="description" content="Complete control center for the 21-agent autonomous workstation system">
+  
+  <!-- Alpine.js for reactivity -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+  
+  <!-- DaisyUI + Tailwind CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.20/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js for analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  
+  <style>
+    [x-cloak] { display: none !important; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .pulse-dot {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .status-active { @apply bg-success text-success-content; }
+    .status-idle { @apply bg-warning text-warning-content; }
+    .status-error { @apply bg-error text-error-content; }
+    .status-building { @apply bg-info text-info-content; }
+  </style>
+</head>
+<body class="bg-base-200 min-h-screen" x-data="workstationControl()" x-init="init()" x-cloak>
+
+  <!-- Main Navigation -->
+  <div class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+    <div class="flex-1">
+      <a href="#" class="btn btn-ghost text-xl">
+        <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+        </svg>
+        Workstation Control Center
+      </a>
+    </div>
+    <div class="flex-none gap-2">
+      <!-- System Status Indicator -->
+      <div class="badge badge-lg gap-2" :class="systemStatus === 'operational' ? 'badge-success' : systemStatus === 'degraded' ? 'badge-warning' : 'badge-error'">
+        <span class="pulse-dot">●</span>
+        <span x-text="systemStatus.toUpperCase()"></span>
+      </div>
+      
+      <!-- Active Agents Count -->
+      <div class="stats stats-horizontal shadow-sm">
+        <div class="stat py-2 px-4">
+          <div class="stat-title text-xs">Active Agents</div>
+          <div class="stat-value text-lg" x-text="activeAgentsCount"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container mx-auto p-4">
+    
+    <!-- Page Header -->
+    <div class="text-center mb-6">
+      <h1 class="text-4xl font-bold mb-2">🤖 21-Agent Autonomous System</h1>
+      <p class="text-lg opacity-70">Build, Monitor, and Orchestrate Your Intelligent Workstation</p>
+    </div>
+
+    <!-- Main Navigation Tabs -->
+    <div class="tabs tabs-boxed justify-center mb-6 flex-wrap">
+      <a class="tab tab-lg" :class="{ 'tab-active': activeView === 'overview' }" @click="activeView = 'overview'">
+        📊 Overview
+      </a>
+      <a class="tab tab-lg" :class="{ 'tab-active': activeView === 'agents' }" @click="activeView = 'agents'">
+        🤖 Agents
+      </a>
+      <a class="tab tab-lg" :class="{ 'tab-active': activeView === 'workflows' }" @click="activeView = 'workflows'">
+        🔄 Workflows
+      </a>
+      <a class="tab tab-lg" :class="{ 'tab-active': activeView === 'monitoring' }" @click="activeView = 'monitoring'">
+        📈 Monitoring
+      </a>
+      <a class="tab tab-lg" :class="{ 'tab-active': activeView === 'settings' }" @click="activeView = 'settings'">
+        ⚙️ Settings
+      </a>
+    </div>
+
+    <!-- Overview View -->
+    <div x-show="activeView === 'overview'" class="fade-in">
+      
+      <!-- Quick Stats -->
+      <div class="stats stats-vertical lg:stats-horizontal shadow w-full mb-6">
+        <div class="stat">
+          <div class="stat-figure text-primary">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="stat-title">Operational Agents</div>
+          <div class="stat-value text-primary" x-text="operationalAgents"></div>
+          <div class="stat-desc" x-text="`${Math.round((operationalAgents/totalAgents)*100)}% availability`"></div>
+        </div>
+        
+        <div class="stat">
+          <div class="stat-figure text-secondary">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+          <div class="stat-title">Active Workflows</div>
+          <div class="stat-value text-secondary" x-text="activeWorkflows"></div>
+          <div class="stat-desc">Running in parallel</div>
+        </div>
+        
+        <div class="stat">
+          <div class="stat-figure text-accent">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+          <div class="stat-title">System Uptime</div>
+          <div class="stat-value text-accent" x-text="uptime"></div>
+          <div class="stat-desc">Since last restart</div>
+        </div>
+      </div>
+
+      <!-- Agent Tiers -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+        
+        <!-- Tier 1: Build Setup Agents (1-6) -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">
+              🏗️ Tier 1: Build Setup
+              <div class="badge badge-primary">Agents 1-6</div>
+            </h2>
+            <p class="text-sm opacity-70">On-demand validation agents that ensure foundational infrastructure</p>
+            <div class="divider my-2"></div>
+            <template x-for="agent in agents.filter(a => a.tier === 1)" :key="agent.id">
+              <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full" :class="getStatusClass(agent.status)"></div>
+                  <span class="text-sm font-medium" x-text="`Agent ${agent.id}`"></span>
+                </div>
+                <button class="btn btn-xs btn-ghost" @click="viewAgent(agent.id)">View</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Tier 2: Weekly Cycle Agents (7-12) -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">
+              🔄 Tier 2: Weekly Cycle
+              <div class="badge badge-secondary">Agents 7-12</div>
+            </h2>
+            <p class="text-sm opacity-70">Autonomous weekly improvement and quality assurance agents</p>
+            <div class="divider my-2"></div>
+            <template x-for="agent in agents.filter(a => a.tier === 2)" :key="agent.id">
+              <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full" :class="getStatusClass(agent.status)"></div>
+                  <span class="text-sm font-medium" x-text="`Agent ${agent.id}`"></span>
+                </div>
+                <button class="btn btn-xs btn-ghost" @click="viewAgent(agent.id)">View</button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Tier 3: Advanced Agents (13-21) -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">
+              🚀 Tier 3: Advanced
+              <div class="badge badge-accent">Agents 13-21</div>
+            </h2>
+            <p class="text-sm opacity-70">Specialized agents for platform features and orchestration</p>
+            <div class="divider my-2"></div>
+            <template x-for="agent in agents.filter(a => a.tier === 3)" :key="agent.id">
+              <div class="flex items-center justify-between py-2 border-b border-base-200 last:border-0">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full" :class="getStatusClass(agent.status)"></div>
+                  <span class="text-sm font-medium" x-text="`Agent ${agent.id}`"></span>
+                </div>
+                <button class="btn btn-xs btn-ghost" @click="viewAgent(agent.id)">View</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">📝 Recent Activity</h2>
+          <div class="overflow-x-auto">
+            <table class="table table-zebra">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Agent</th>
+                  <th>Action</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="activity in recentActivity" :key="activity.id">
+                  <tr>
+                    <td class="text-sm" x-text="activity.time"></td>
+                    <td><span class="badge badge-sm" x-text="`Agent ${activity.agentId}`"></span></td>
+                    <td class="text-sm" x-text="activity.action"></td>
+                    <td>
+                      <span class="badge badge-sm" :class="activity.status === 'success' ? 'badge-success' : 'badge-error'" x-text="activity.status"></span>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Agents View -->
+    <div x-show="activeView === 'agents'" class="fade-in">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <template x-for="agent in agents" :key="agent.id">
+          <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow cursor-pointer" @click="viewAgent(agent.id)">
+            <div class="card-body p-4">
+              <div class="flex justify-between items-start mb-2">
+                <h3 class="card-title text-base" x-text="`Agent ${agent.id}`"></h3>
+                <div class="badge badge-sm" :class="getStatusBadgeClass(agent.status)" x-text="agent.status"></div>
+              </div>
+              <p class="text-xs opacity-70 mb-3" x-text="agent.name"></p>
+              
+              <!-- Agent Metrics -->
+              <div class="stats stats-vertical shadow-sm bg-base-200 w-full text-xs">
+                <div class="stat py-1 px-2">
+                  <div class="stat-title text-xs">Accuracy</div>
+                  <div class="stat-value text-sm" x-text="`${agent.accuracy}%`"></div>
+                </div>
+                <div class="stat py-1 px-2">
+                  <div class="stat-title text-xs">Executions</div>
+                  <div class="stat-value text-sm" x-text="agent.executions"></div>
+                </div>
+              </div>
+              
+              <div class="card-actions justify-end mt-3">
+                <button class="btn btn-xs btn-primary" @click.stop="executeAgent(agent.id)">Execute</button>
+                <button class="btn btn-xs btn-ghost" @click.stop="viewAgent(agent.id)">Details</button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Workflows View -->
+    <div x-show="activeView === 'workflows'" class="fade-in">
+      <div class="card bg-base-100 shadow-xl mb-4">
+        <div class="card-body">
+          <h2 class="card-title">🔄 Active Workflows</h2>
+          <p class="opacity-70">Manage and monitor agent workflow pipelines</p>
+          <div class="divider"></div>
+          
+          <!-- Workflow Builder Placeholder -->
+          <div class="alert alert-info">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+              <h3 class="font-bold">Workflow Builder</h3>
+              <div class="text-sm">Visual workflow builder coming soon! Create custom agent pipelines with drag-and-drop.</div>
+            </div>
+          </div>
+          
+          <!-- Example Workflow -->
+          <div class="card bg-base-200">
+            <div class="card-body">
+              <h3 class="font-bold">Weekly Autonomous Cycle</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <div class="badge badge-lg">Agent 7</div>
+                <span>→</span>
+                <div class="badge badge-lg">Agent 8</div>
+                <span>→</span>
+                <div class="badge badge-lg">Agent 9</div>
+                <span>→</span>
+                <div class="badge badge-lg">Agent 10</div>
+                <span>→</span>
+                <div class="badge badge-lg">Agent 11</div>
+                <span>→</span>
+                <div class="badge badge-lg">Agent 12</div>
+              </div>
+              <div class="card-actions justify-end mt-2">
+                <button class="btn btn-sm btn-primary">Trigger Now</button>
+                <button class="btn btn-sm btn-ghost">Configure</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monitoring View -->
+    <div x-show="activeView === 'monitoring'" class="fade-in">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        <!-- Performance Chart -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">📈 System Performance</h2>
+            <canvas id="performanceChart" width="400" height="300"></canvas>
+          </div>
+        </div>
+        
+        <!-- Agent Accuracy Chart -->
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            <h2 class="card-title">🎯 Agent Accuracy</h2>
+            <canvas id="accuracyChart" width="400" height="300"></canvas>
+          </div>
+        </div>
+        
+        <!-- System Metrics -->
+        <div class="card bg-base-100 shadow-xl lg:col-span-2">
+          <div class="card-body">
+            <h2 class="card-title">💻 System Metrics</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="stat bg-base-200 rounded-box">
+                <div class="stat-title">CPU Usage</div>
+                <div class="stat-value text-primary" x-text="`${Math.round(metrics.cpu)}%`"></div>
+                <progress class="progress progress-primary w-full" :value="metrics.cpu" max="100"></progress>
+              </div>
+              <div class="stat bg-base-200 rounded-box">
+                <div class="stat-title">Memory Usage</div>
+                <div class="stat-value text-secondary" x-text="`${Math.round(metrics.memory)}%`"></div>
+                <progress class="progress progress-secondary w-full" :value="metrics.memory" max="100"></progress>
+              </div>
+              <div class="stat bg-base-200 rounded-box">
+                <div class="stat-title">Active Processes</div>
+                <div class="stat-value text-accent" x-text="metrics.processes"></div>
+                <div class="stat-desc">Running</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings View -->
+    <div x-show="activeView === 'settings'" class="fade-in">
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">⚙️ System Configuration</h2>
+          
+          <!-- API Configuration -->
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-bold">API Base URL</span>
+            </label>
+            <input type="text" x-model="config.apiUrl" placeholder="https://your-api.railway.app" class="input input-bordered" />
+            <label class="label">
+              <span class="label-text-alt">Configure your workstation API endpoint</span>
+            </label>
+          </div>
+          
+          <!-- Accuracy Threshold -->
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-bold">Minimum Accuracy Threshold</span>
+            </label>
+            <input type="range" min="50" max="100" x-model="config.accuracyThreshold" class="range range-primary" step="5" />
+            <div class="w-full flex justify-between text-xs px-2">
+              <span>50%</span>
+              <span>75%</span>
+              <span>100%</span>
+            </div>
+            <label class="label">
+              <span class="label-text-alt">Agents below this threshold will trigger alerts</span>
+            </label>
+          </div>
+          
+          <!-- Automation Settings -->
+          <div class="form-control">
+            <label class="label cursor-pointer">
+              <span class="label-text font-bold">Enable Automated Handoffs</span>
+              <input type="checkbox" x-model="config.autoHandoffs" class="toggle toggle-primary" />
+            </label>
+            <label class="label">
+              <span class="label-text-alt">Automatically pass data between agents in workflows</span>
+            </label>
+          </div>
+          
+          <div class="form-control">
+            <label class="label cursor-pointer">
+              <span class="label-text font-bold">Enable Guardrails</span>
+              <input type="checkbox" x-model="config.guardrails" class="toggle toggle-secondary" />
+            </label>
+            <label class="label">
+              <span class="label-text-alt">Enforce safety checks and validation rules</span>
+            </label>
+          </div>
+          
+          <div class="card-actions justify-end mt-4">
+            <button class="btn btn-primary" @click="saveConfig()">Save Configuration</button>
+            <button class="btn btn-ghost" @click="resetConfig()">Reset to Defaults</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Agent Detail Modal -->
+  <dialog id="agentModal" class="modal" :class="{ 'modal-open': selectedAgent }">
+    <div class="modal-box w-11/12 max-w-3xl" x-show="selectedAgent">
+      <h3 class="font-bold text-lg mb-4" x-text="selectedAgent ? `Agent ${selectedAgent.id}: ${selectedAgent.name}` : ''"></h3>
+      
+      <div class="grid grid-cols-2 gap-4 mb-4" x-show="selectedAgent">
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Status</div>
+          <div class="stat-value text-sm" x-text="selectedAgent?.status"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Accuracy</div>
+          <div class="stat-value text-sm" x-text="selectedAgent ? `${selectedAgent.accuracy}%` : ''"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Total Executions</div>
+          <div class="stat-value text-sm" x-text="selectedAgent?.executions"></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Last Run</div>
+          <div class="stat-value text-xs" x-text="selectedAgent?.lastRun"></div>
+        </div>
+      </div>
+      
+      <div class="divider">Agent Details</div>
+      
+      <div class="space-y-2">
+        <p><strong>Description:</strong> <span x-text="selectedAgent?.description"></span></p>
+        <p><strong>Tier:</strong> <span x-text="`Tier ${selectedAgent?.tier}`"></span></p>
+        <p><strong>Capabilities:</strong></p>
+        <ul class="list-disc list-inside ml-4">
+          <template x-for="capability in (selectedAgent?.capabilities || [])" :key="capability">
+            <li x-text="capability"></li>
+          </template>
+        </ul>
+      </div>
+      
+      <div class="modal-action">
+        <button class="btn btn-primary" @click="executeAgent(selectedAgent.id)">Execute Agent</button>
+        <button class="btn" @click="selectedAgent = null">Close</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop" @click="selectedAgent = null">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <!-- Toast Notifications -->
+  <div class="toast toast-end" x-show="toast.show" x-cloak>
+    <div class="alert" :class="`alert-${toast.type}`">
+      <span x-text="toast.message"></span>
+    </div>
+  </div>
+
+  <script>
+    function workstationControl() {
+      return {
+        // State
+        activeView: 'overview',
+        systemStatus: 'operational', // operational, degraded, offline
+        selectedAgent: null,
+        
+        // Configuration
+        config: {
+          apiUrl: 'http://localhost:3000',
+          accuracyThreshold: 90,
+          autoHandoffs: true,
+          guardrails: true
+        },
+        
+        // Metrics
+        metrics: {
+          cpu: 45,
+          memory: 62,
+          processes: 21
+        },
+        
+        // Stats
+        totalAgents: 21,
+        operationalAgents: 17,
+        activeWorkflows: 3,
+        uptime: '7d 14h',
+        
+        // Agents Data
+        agents: [
+          // Tier 1: Build Setup (1-6)
+          { id: 1, name: 'TypeScript API Architect', tier: 1, status: 'idle', accuracy: 98, executions: 15, lastRun: '2 days ago', description: 'Validates TypeScript API foundation', capabilities: ['TypeScript config', 'Express setup', 'JWT auth'] },
+          { id: 2, name: 'Go Backend & Browser Automation', tier: 1, status: 'idle', accuracy: 96, executions: 12, lastRun: '2 days ago', description: 'Validates Go backend and browser automation', capabilities: ['Go backend', 'chromedp', 'Browser actions'] },
+          { id: 3, name: 'Database & Orchestration', tier: 1, status: 'idle', accuracy: 97, executions: 10, lastRun: '2 days ago', description: 'Validates database and workflow orchestration', capabilities: ['SQLite', 'Workflow engine', 'DAG resolver'] },
+          { id: 4, name: 'Integration Specialist', tier: 1, status: 'idle', accuracy: 95, executions: 8, lastRun: '2 days ago', description: 'Validates external integrations', capabilities: ['Slack bot', 'Webhooks', 'Triggers'] },
+          { id: 5, name: 'DevOps & Containerization', tier: 1, status: 'idle', accuracy: 99, executions: 14, lastRun: '2 days ago', description: 'Validates Docker containerization', capabilities: ['Dockerfile', 'docker-compose', 'Memory containers'] },
+          { id: 6, name: 'QA & Documentation', tier: 1, status: 'idle', accuracy: 97, executions: 11, lastRun: '2 days ago', description: 'Validates testing and documentation', capabilities: ['Jest tests', 'Documentation', 'Coverage analysis'] },
+          
+          // Tier 2: Weekly Cycle (7-12)
+          { id: 7, name: 'Security Scanner', tier: 2, status: 'active', accuracy: 100, executions: 52, lastRun: '5 hours ago', description: 'Scans for security vulnerabilities', capabilities: ['npm audit', 'Secret scanning', 'Dependency checks'] },
+          { id: 8, name: 'Error Assessment & Documentation', tier: 2, status: 'active', accuracy: 94, executions: 48, lastRun: '1 day ago', description: 'Assesses errors and creates documentation', capabilities: ['Error analysis', 'Report generation', 'Documentation'] },
+          { id: 9, name: 'Optimization Magician', tier: 2, status: 'active', accuracy: 92, executions: 45, lastRun: '1 day ago', description: 'Optimizes performance and code quality', capabilities: ['Performance analysis', 'Code optimization', 'Best practices'] },
+          { id: 10, name: 'Guard Rails & Error Prevention', tier: 2, status: 'active', accuracy: 96, executions: 43, lastRun: '1 day ago', description: 'Validates guard rails and prevents errors', capabilities: ['Loop detection', 'Timeout validation', 'Edge case testing'] },
+          { id: 11, name: 'Data Analytics & Comparison', tier: 2, status: 'active', accuracy: 93, executions: 40, lastRun: '2 days ago', description: 'Analyzes trends and generates insights', capabilities: ['Trend analysis', 'Comparisons', 'Report generation'] },
+          { id: 12, name: 'QA & Intelligence Tracker', tier: 2, status: 'active', accuracy: 95, executions: 38, lastRun: '2 days ago', description: 'Quality assurance and intelligence tracking', capabilities: ['QA checks', 'Intelligence scoring', 'Weekly reports'] },
+          
+          // Tier 3: Advanced (13-21)
+          { id: 13, name: 'Advanced Automation Engineer', tier: 3, status: 'building', accuracy: 88, executions: 5, lastRun: '1 week ago', description: 'Advanced automation capabilities', capabilities: ['Complex workflows', 'AI integration', 'Advanced patterns'] },
+          { id: 14, name: 'API Integrator', tier: 3, status: 'building', accuracy: 90, executions: 3, lastRun: '1 week ago', description: 'External API integration specialist', capabilities: ['REST APIs', 'GraphQL', 'WebSockets'] },
+          { id: 15, name: 'Data Processor', tier: 3, status: 'building', accuracy: 91, executions: 4, lastRun: '1 week ago', description: 'Advanced data processing', capabilities: ['CSV/Excel', 'PDF parsing', 'Data enrichment'] },
+          { id: 16, name: 'Competitor Intelligence', tier: 3, status: 'active', accuracy: 94, executions: 12, lastRun: '3 days ago', description: 'Competitor research automation', capabilities: ['Web scraping', 'Sentiment analysis', 'Market intelligence'] },
+          { id: 17, name: 'AI-Powered Project Builder', tier: 3, status: 'active', accuracy: 89, executions: 8, lastRun: '4 days ago', description: 'AI-assisted project scaffolding', capabilities: ['Project generation', 'Browser automation', 'AI integration'] },
+          { id: 18, name: 'Community Hub Manager', tier: 3, status: 'planned', accuracy: 0, executions: 0, lastRun: 'Never', description: 'Community engagement platform', capabilities: ['Forums', 'User management', 'Content moderation'] },
+          { id: 19, name: 'Deployment Manager', tier: 3, status: 'planned', accuracy: 0, executions: 0, lastRun: 'Never', description: 'Enterprise deployment orchestration', capabilities: ['Multi-cloud', 'Kubernetes', 'CI/CD'] },
+          { id: 20, name: 'Master Orchestrator', tier: 3, status: 'planned', accuracy: 0, executions: 0, lastRun: 'Never', description: 'Coordinates all 21 agents', capabilities: ['Agent coordination', 'Pipeline management', 'Resource allocation'] },
+          { id: 21, name: 'Universal Builder', tier: 3, status: 'active', accuracy: 96, executions: 25, lastRun: '1 day ago', description: 'Generates new agents systematically', capabilities: ['Agent scaffolding', 'Code generation', 'Documentation'] }
+        ],
+        
+        // Recent Activity
+        recentActivity: [
+          { id: 1, time: '2 min ago', agentId: 7, action: 'Security scan completed', status: 'success' },
+          { id: 2, time: '15 min ago', agentId: 21, action: 'Generated Agent 22 scaffold', status: 'success' },
+          { id: 3, time: '1 hour ago', agentId: 12, action: 'Weekly QA report generated', status: 'success' },
+          { id: 4, time: '2 hours ago', agentId: 10, action: 'Guard rails validation', status: 'success' },
+          { id: 5, time: '3 hours ago', agentId: 9, action: 'Optimization run', status: 'success' }
+        ],
+        
+        // Toast
+        toast: {
+          show: false,
+          message: '',
+          type: 'info' // info, success, warning, error
+        },
+        
+        // Computed
+        get activeAgentsCount() {
+          return this.agents.filter(a => a.status === 'active').length;
+        },
+        
+        // Methods
+        async init() {
+          console.log('Workstation Control Center initialized');
+          // Load saved config from localStorage
+          const savedConfig = localStorage.getItem('workstation_config');
+          if (savedConfig) {
+            this.config = { ...this.config, ...JSON.parse(savedConfig) };
+          }
+          
+          // Initialize charts
+          setTimeout(() => {
+            this.initCharts();
+          }, 500);
+          
+          // Simulate real-time updates
+          setInterval(() => {
+            this.updateMetrics();
+          }, 5000);
+        },
+        
+        initCharts() {
+          // Performance Chart
+          const perfCtx = document.getElementById('performanceChart');
+          if (perfCtx) {
+            new Chart(perfCtx, {
+              type: 'line',
+              data: {
+                labels: ['1h', '2h', '3h', '4h', '5h', '6h'],
+                datasets: [{
+                  label: 'Success Rate',
+                  data: [95, 97, 94, 98, 96, 99],
+                  borderColor: 'rgb(75, 192, 192)',
+                  tension: 0.1
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false
+              }
+            });
+          }
+          
+          // Accuracy Chart
+          const accCtx = document.getElementById('accuracyChart');
+          if (accCtx) {
+            const topAgents = this.agents.slice(0, 10);
+            new Chart(accCtx, {
+              type: 'bar',
+              data: {
+                labels: topAgents.map(a => `Agent ${a.id}`),
+                datasets: [{
+                  label: 'Accuracy %',
+                  data: topAgents.map(a => a.accuracy),
+                  backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                  borderColor: 'rgba(54, 162, 235, 1)',
+                  borderWidth: 1
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: {
+                    beginAtZero: true,
+                    max: 100
+                  }
+                }
+              }
+            });
+          }
+        },
+        
+        updateMetrics() {
+          // Simulate metric updates
+          this.metrics.cpu = Math.max(20, Math.min(80, this.metrics.cpu + (Math.random() - 0.5) * 10));
+          this.metrics.memory = Math.max(30, Math.min(90, this.metrics.memory + (Math.random() - 0.5) * 5));
+        },
+        
+        getStatusClass(status) {
+          const classes = {
+            'active': 'bg-success',
+            'idle': 'bg-warning',
+            'error': 'bg-error',
+            'building': 'bg-info',
+            'planned': 'bg-base-300'
+          };
+          return classes[status] || 'bg-base-300';
+        },
+        
+        getStatusBadgeClass(status) {
+          const classes = {
+            'active': 'badge-success',
+            'idle': 'badge-warning',
+            'error': 'badge-error',
+            'building': 'badge-info',
+            'planned': 'badge-ghost'
+          };
+          return classes[status] || 'badge-ghost';
+        },
+        
+        viewAgent(agentId) {
+          this.selectedAgent = this.agents.find(a => a.id === agentId);
+        },
+        
+        async executeAgent(agentId) {
+          this.showToast(`Executing Agent ${agentId}...`, 'info');
+          
+          // Simulate execution
+          setTimeout(() => {
+            this.showToast(`Agent ${agentId} executed successfully!`, 'success');
+            const agent = this.agents.find(a => a.id === agentId);
+            if (agent) {
+              agent.executions++;
+              agent.lastRun = 'Just now';
+              agent.status = 'active';
+            }
+          }, 2000);
+        },
+        
+        saveConfig() {
+          localStorage.setItem('workstation_config', JSON.stringify(this.config));
+          this.showToast('Configuration saved successfully!', 'success');
+        },
+        
+        resetConfig() {
+          this.config = {
+            apiUrl: 'http://localhost:3000',
+            accuracyThreshold: 90,
+            autoHandoffs: true,
+            guardrails: true
+          };
+          localStorage.removeItem('workstation_config');
+          this.showToast('Configuration reset to defaults', 'info');
+        },
+        
+        showToast(message, type = 'info') {
+          this.toast = { show: true, message, type };
+          setTimeout(() => {
+            this.toast.show = false;
+          }, 3000);
+        }
+      };
+    }
+  </script>
+
+</body>
+</html>

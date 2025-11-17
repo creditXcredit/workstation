@@ -141,7 +141,6 @@ export class Agent17 {
 
 // Export all types and utilities
 export * from './types/index.js';
-export * from './browser/manager.js';
 export { log, setLogLevel, createLogger } from './utils/logger.js';
 export { withRetry, retryUntil } from './utils/retry.js';
 

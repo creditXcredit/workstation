@@ -35,7 +35,7 @@ export async function fillForm(
         );
         
         if (tagName === 'select') {
-          await element.selectOption(value);
+          await element.selectOption(String(value));
         } else if (inputType === 'checkbox' || inputType === 'radio') {
           if (value === 'true' || value === true) {
             await element.check();
