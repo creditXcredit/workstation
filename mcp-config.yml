@@ -1,0 +1,147 @@
+# Model Context Protocol (MCP) Configuration
+# This file configures the MCP server for browser automation via Chrome DevTools Protocol (CDP)
+
+# MCP Server Configuration
+mcp:
+  enabled: true
+  version: "1.0"
+  
+  # Server Details
+  server:
+    name: "workstation-mcp-server"
+    description: "MCP Server for Workstation Browser Automation"
+    version: "1.0.0"
+    
+  # Connection Settings
+  connection:
+    protocol: "websocket"
+    host: "0.0.0.0"
+    port: 8082
+    reconnect:
+      enabled: true
+      maxAttempts: 5
+      delay: 2000
+      backoff: "exponential"
+    
+  # Chrome DevTools Protocol (CDP) Settings
+  cdp:
+    enabled: true
+    host: "localhost"
+    port: 9222
+    secure: false
+    timeout: 30000
+    
+    # Browser Launch Options (when not connecting to existing browser)
+    launch:
+      headless: true
+      args:
+        - "--no-sandbox"
+        - "--disable-setuid-sandbox"
+        - "--disable-dev-shm-usage"
+        - "--disable-gpu"
+        - "--remote-debugging-port=9222"
+        - "--remote-allow-origins=*"
+    
+    # Page Settings
+    page:
+      defaultTimeout: 30000
+      defaultNavigationTimeout: 30000
+      viewport:
+        width: 1280
+        height: 720
+        
+  # Capabilities
+  capabilities:
+    browserAutomation: true
+    navigation: true
+    interaction: true
+    dataExtraction: true
+    screenshot: true
+    pageContent: true
+    evaluation: true
+    
+  # Security
+  security:
+    authentication:
+      enabled: false  # Set to true in production
+      type: "bearer"
+      # token: "${AUTH_TOKEN}"  # Set via environment variable
+    
+    cors:
+      enabled: true
+      origins:
+        - "http://localhost:3000"
+        - "http://localhost:8080"
+        
+    rateLimit:
+      enabled: true
+      maxRequests: 100
+      windowMs: 60000  # 1 minute
+      
+  # Logging
+  logging:
+    level: "info"  # debug, info, warn, error
+    format: "json"
+    outputs:
+      - type: "console"
+      - type: "file"
+        path: "/app/logs/mcp-server.log"
+        maxSize: "10m"
+        maxFiles: 5
+        
+  # Monitoring
+  monitoring:
+    healthCheck:
+      enabled: true
+      endpoint: "/health"
+      interval: 30000
+      
+    metrics:
+      enabled: true
+      endpoint: "/metrics"
+      
+  # Recovery & Rollback
+  recovery:
+    enabled: true
+    peelback:
+      enabled: true
+      snapshots:
+        interval: 300000  # 5 minutes
+        maxSnapshots: 10
+        storage: "/app/data/snapshots"
+      
+    rollback:
+      enabled: true
+      strategy: "automatic"  # automatic, manual
+      triggers:
+        - "criticalError"
+        - "healthCheckFailure"
+        
+    retry:
+      enabled: true
+      maxAttempts: 3
+      delay: 1000
+      backoff: "exponential"
+      
+# Environment-specific Overrides
+environments:
+  development:
+    mcp:
+      logging:
+        level: "debug"
+      security:
+        authentication:
+          enabled: false
+          
+  production:
+    mcp:
+      logging:
+        level: "info"
+      security:
+        authentication:
+          enabled: true
+      recovery:
+        peelback:
+          snapshots:
+            interval: 600000  # 10 minutes
+            maxSnapshots: 20

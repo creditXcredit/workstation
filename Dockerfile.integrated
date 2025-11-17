@@ -1,0 +1,115 @@
+# Multi-stage build for Workstation: JWT Auth + Browser Agent Server + MCP
+FROM node:18-alpine AS builder
+
+# Add build metadata labels
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION=1.0.0
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json ./
+
+# Install all dependencies (including dev dependencies for build)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build TypeScript
+RUN npm run build
+
+# ==============================================================================
+# Agent Server build stage
+# ==============================================================================
+FROM node:18-alpine AS agent-server-builder
+
+WORKDIR /workspace
+
+# Copy agent-server
+COPY agent-server/nodejs /workspace/agent-server
+
+WORKDIR /workspace/agent-server
+
+# Install dependencies
+RUN npm install
+
+# ==============================================================================
+# Production stage - Workstation + Agent Server
+# ==============================================================================
+FROM node:18-alpine
+
+# Add OCI standard labels for image metadata
+LABEL org.opencontainers.image.title="workstation"
+LABEL org.opencontainers.image.description="Browser Automation Platform with JWT Authentication, Agent Server, and MCP support"
+LABEL org.opencontainers.image.vendor="creditXcredit"
+LABEL org.opencontainers.image.source="https://github.com/creditXcredit/workstation"
+LABEL org.opencontainers.image.documentation="https://github.com/creditXcredit/workstation/blob/main/README.md"
+LABEL org.opencontainers.image.licenses="MIT"
+
+# Add dynamic labels (populated by build args from CI)
+ARG BUILD_DATE
+ARG VCS_REF
+ARG VERSION
+LABEL org.opencontainers.image.created="${BUILD_DATE}"
+LABEL org.opencontainers.image.revision="${VCS_REF}"
+LABEL org.opencontainers.image.version="${VERSION}"
+
+# Install bash for startup script and Playwright dependencies
+RUN apk add --no-cache bash chromium
+
+# Set Playwright to use system chromium
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Copy package files for main application
+COPY package.json package-lock.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev && \
+    npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder /app/dist ./dist
+
+# Copy agent-server from builder stage
+COPY --from=agent-server-builder /workspace/agent-server /app/agent-server
+
+# Copy startup script
+COPY docker/start-services.sh /usr/local/bin/start-services.sh
+RUN chmod +x /usr/local/bin/start-services.sh
+
+# Change ownership to non-root user
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Environment variables
+ENV PORT=3000
+ENV NODE_ENV=production
+ENV AGENT_SERVER_WS_PORT=8082
+ENV AGENT_SERVER_HTTP_PORT=8080
+ENV AGENT_SERVER_HOST=0.0.0.0
+ENV CDP_HOST=host.docker.internal
+ENV CDP_PORT=9222
+
+# Expose ports
+# 3000: JWT Auth API
+# 8080: Agent Server HTTP API
+# 8082: Agent Server WebSocket
+EXPOSE 3000 8080 8082
+
+# Health check for main application
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Start all services
+CMD ["/bin/bash", "/usr/local/bin/start-services.sh"]
