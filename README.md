@@ -111,7 +111,19 @@ npm run build
 npm start
 ```
 
-7. Run tests:
+7. Verify deployment (optional but recommended):
+```bash
+npm run verify
+```
+This runs a comprehensive startup verification that checks:
+- ✅ Environment variables configured
+- ✅ All required files present
+- ✅ Server responding on configured port
+- ✅ Database connected
+- ✅ All API endpoints functional
+- ✅ UI files accessible
+
+8. Run tests:
 ```bash
 npm test
 ```
@@ -193,6 +205,9 @@ After deployment:
 2. Your application will be available at: `https://your-app.railway.app`
 3. Test it: `https://your-app.railway.app/health`
 4. Get a demo token: `https://your-app.railway.app/auth/demo-token`
+5. Access UI: `https://your-app.railway.app/workstation-control-center.html`
+
+**📋 For complete deployment instructions, see [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)**
 
 ### Option 2: Railway CLI
 
