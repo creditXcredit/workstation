@@ -65,7 +65,7 @@ graph LR
 ### Overview
 Established the foundational JWT authentication service that would become the security layer for the entire automation platform.
 
-### v1.0.0 - November 11, 2025
+### v1.0.0 - November 11, 2024
 
 **Initial Release - Core Authentication**
 

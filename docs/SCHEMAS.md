@@ -876,9 +876,9 @@ const workflow: Workflow = {
 
 ## Related Documentation
 
-- [API.md](../api/API.md) - Complete API documentation
-- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - System architecture
-- [HOW_TO_USE_BROWSER_AGENT.md](../guides/HOW_TO_USE_BROWSER_AGENT.md) - Usage guide
+- [API.md](../../api/API.md) - Complete API documentation
+- [ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) - System architecture
+- [HOW_TO_USE_BROWSER_AGENT.md](../../guides/HOW_TO_USE_BROWSER_AGENT.md) - Usage guide
 - [PROJECT_TIMELINE.md](../../PROJECT_TIMELINE.md) - Project history
 
 ---

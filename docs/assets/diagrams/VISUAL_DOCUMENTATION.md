@@ -493,7 +493,7 @@ sequenceDiagram
     JWT->>JWT: Sign with Secret
     JWT-->>Auth: Signed Token
     Auth-->>API: Token Response
-    API-->>Client: {token, expiresIn}
+    API-->>Client: {"token": "eyJ...", "expiresIn": "24h"}
     
     Note over Client: Store Token Securely
     
@@ -687,7 +687,7 @@ When updating system architecture or workflow:
 
 ## Related Documentation
 
-- [ARCHITECTURE.md](../architecture/ARCHITECTURE.md) - Detailed architecture documentation
+- [ARCHITECTURE.md](../../architecture/ARCHITECTURE.md) - Detailed architecture documentation
 - [PROJECT_TIMELINE.md](../../PROJECT_TIMELINE.md) - Complete project timeline
 - [DEVELOPMENT_PHASES.md](../../DEVELOPMENT_PHASES.md) - Phase documentation
 - [ROADMAP.md](../../architecture/ROADMAP.md) - Future plans
