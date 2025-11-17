@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import { createHash } from 'crypto';
+import { join } from 'path';
 import { generateToken, generateDemoToken, authenticateToken, AuthenticatedRequest } from './auth/jwt';
 import { validateRequest, schemas } from './middleware/validation';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
@@ -12,7 +13,7 @@ import { getHealthStatus } from './utils/health';
 import { validateEnvironment, printEnvironmentSummary } from './utils/env';
 // Phase 1: Import automation routes and database
 import automationRoutes from './routes/automation';
-import { initializeDatabase } from './automation/db/database';
+import { initializeDatabase, getDatabase } from './automation/db/database';
 
 // Load environment variables
 dotenv.config();
@@ -50,14 +51,15 @@ const authLimiter = rateLimit({
 });
 
 // Middleware
-// Security headers with Helmet
+// Security headers with Helmet - relaxed for serving UI
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // Allow inline scripts for UI
       imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
     },
   },
   hsts: {
@@ -101,6 +103,11 @@ app.use(cors({
 app.use(express.json());
 app.use(limiter); // Apply rate limiting to all routes
 
+// Serve static files from docs directory (UI)
+const docsPath = join(__dirname, '..', 'docs');
+app.use(express.static(docsPath));
+logger.info('Serving static UI files', { path: docsPath });
+
 // Request logging middleware - anonymize IPs for privacy
 app.use((req: Request, res: Response, next) => {
   const start = Date.now();
@@ -119,9 +126,21 @@ app.use((req: Request, res: Response, next) => {
   next();
 });
 
-// Health check endpoint with enhanced metrics
-app.get('/health', (req: Request, res: Response) => {
+// Health check endpoint with enhanced metrics including database status
+app.get('/health', async (req: Request, res: Response) => {
   const health = getHealthStatus();
+  
+  // Add database health check
+  try {
+    const db = getDatabase();
+    // Simple query to check database connection
+    await db.get('SELECT 1 as test');
+    health.database = { status: 'connected' };
+  } catch (error) {
+    health.database = { status: 'disconnected', error: (error as Error).message };
+    health.status = 'degraded';
+  }
+  
   const statusCode = health.status === 'ok' ? 200 : 503;
   res.status(statusCode).json(health);
 });

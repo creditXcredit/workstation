@@ -11,6 +11,10 @@ export interface HealthStatus {
     percentage: number;
   };
   version: string;
+  database?: {
+    status: string;
+    error?: string;
+  };
 }
 
 export function getHealthStatus(): HealthStatus {
