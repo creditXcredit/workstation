@@ -1,3 +1,17 @@
+// CRITICAL: Global error handlers must be registered BEFORE any other code
+// These handlers prevent unhandled errors from crashing the process silently
+process.on('uncaughtException', (err: Error) => {
+  console.error('FATAL: Unhandled exception:', err);
+  console.error('Stack trace:', err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  console.error('FATAL: Unhandled promise rejection:', reason);
+  console.error('Promise:', promise);
+  process.exit(1);
+});
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -18,6 +32,20 @@ import { initializeDatabase, getDatabase } from './automation/db/database';
 
 // Load environment variables
 dotenv.config();
+
+// CRITICAL: JWT_SECRET validation MUST happen before server starts
+// This prevents insecure configurations from reaching production
+const jwtSecret = process.env.JWT_SECRET;
+if (!jwtSecret || jwtSecret === 'changeme' || jwtSecret === 'default-secret-change-this-in-production-use-at-least-32-characters') {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('FATAL: Unsafe JWT_SECRET configured. Server will not start.');
+    console.error('JWT_SECRET must be set to a secure value in production (at least 32 characters).');
+    console.error('Current value is either missing or using a default/unsafe value.');
+    throw new Error('Unsafe JWT_SECRET configured. Server will not start.');
+  } else if (process.env.NODE_ENV !== 'test') {
+    console.warn('WARNING: Using default/unsafe JWT_SECRET. This is only acceptable in development.');
+  }
+}
 
 // Validate environment configuration
 const envConfig = validateEnvironment();
