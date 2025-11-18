@@ -83,7 +83,6 @@ export function errorHandler(
   res.status(statusCode).json({
     error: errorMessage,
     code: errorCode,
-    message: isDevelopment ? err.message : undefined,
     timestamp: new Date().toISOString(),
     path: req.path,
     // Never send stack traces to clients
