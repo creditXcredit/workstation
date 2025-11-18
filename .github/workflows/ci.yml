@@ -59,6 +59,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for secret scanning
       
       - name: Use Node.js
         uses: actions/setup-node@v6
@@ -68,6 +70,15 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+      
+      - name: Run TruffleHog secret scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ""
+          head: ${{ github.ref_name }}
+          extra_args: --json --only-verified
+        continue-on-error: true
       
       - name: Run npm audit
         run: |
@@ -291,9 +302,9 @@ jobs:
           fi
           
           if [ "$SECURITY_STATUS" = "success" ]; then
-            echo "- ✅ **Security Audit**: PASS" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ **Security Audit (npm audit, audit-ci, TruffleHog)**: PASS" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- ⚠️ **Security Audit**: $SECURITY_STATUS (non-blocking)" >> $GITHUB_STEP_SUMMARY
+            echo "- ⚠️ **Security Audit (npm audit, audit-ci, TruffleHog)**: $SECURITY_STATUS (non-blocking)" >> $GITHUB_STEP_SUMMARY
           fi
           
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -328,6 +339,13 @@ jobs:
           echo "- 🔇 agent-doc-generator.yml.disabled" >> $GITHUB_STEP_SUMMARY
           echo "- 🔇 agent-scaffolder.yml.disabled" >> $GITHUB_STEP_SUMMARY
           echo "- 🔇 agent-ui-matcher.yml.disabled" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Secret Scanning" >> $GITHUB_STEP_SUMMARY
+          echo "Secret scanning is **automatically included** in the Security Audit job:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ TruffleHog - Free, no license required (automatic, runs on every PR)" >> $GITHUB_STEP_SUMMARY
+          echo "- ⊘ Gitleaks - Optional separate workflow, requires license (disabled by default)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**No key = No failure** - TruffleHog always runs, Gitleaks is optional" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "---" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
