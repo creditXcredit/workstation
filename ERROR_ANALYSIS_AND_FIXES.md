@@ -84,12 +84,21 @@ Workflows use quoted heredoc syntax (`<< 'EOF'`) with GitHub Actions variable in
 **Root Cause**:
 Stale branch protection requirements from previous configuration. This is a **Node.js/TypeScript** project, not a Python project.
 
-**Resolution Status**: **DOCUMENTED**
+**Resolution Status**: **DOCUMENTED + CI STATUS SUMMARY ADDED**
 
 **Documentation**:
 - `.github/workflows/PHANTOM_CHECKS_RESOLUTION.md` - Comprehensive resolution guide
 - `.github/workflows/CI_STATUS.md` - Current workflow status
 - `.github/BRANCH_PROTECTION_UPDATE_GUIDE.md` - Branch protection update instructions
+
+**New Feature - CI Status Summary**:
+A new `CI Status Summary` job has been added to the CI/CD workflow that runs after all checks and provides:
+- ✅ Clear indication of which core checks (test, security) are passing
+- ⚠️ Explicit listing of phantom/optional/skipped checks that may block PRs
+- 🔧 Step-by-step resolution instructions for admin/configuration blocks
+- 📚 Links to relevant documentation for troubleshooting
+
+This summary appears in the GitHub Actions workflow run and makes it immediately clear when a PR is blocked by configuration issues versus actual code/test failures.
 
 **Action Required**: Repository administrators need to update GitHub branch protection settings
 
