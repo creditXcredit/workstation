@@ -52,7 +52,13 @@ describe('MCP Routes', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      const toolNames = response.body.tools.map((t: any) => t.name);
+      interface Tool {
+        name: string;
+        description: string;
+        inputSchema: object;
+        // Add other properties if needed
+      }
+      const toolNames = (response.body.tools as Tool[]).map((t: Tool) => t.name);
       expect(toolNames).toContain('browser_navigate');
       expect(toolNames).toContain('browser_click');
       expect(toolNames).toContain('browser_type');
