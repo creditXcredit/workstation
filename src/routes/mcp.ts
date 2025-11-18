@@ -10,6 +10,46 @@ import { logger } from '../utils/logger';
 const router = Router();
 
 /**
+ * Type definitions for MCP responses
+ */
+interface ToolExecutionResult {
+  success: boolean;
+  message?: string;
+  endpoint?: string;
+  parameters?: Record<string, unknown>;
+  tool?: string;
+  note?: string;
+}
+
+interface ResourceData {
+  message?: string;
+  endpoint?: string;
+  note?: string;
+  tool?: string;
+  resource?: string;
+}
+
+interface WorkflowTask {
+  name: string;
+  agent_type: string;
+  action: string;
+  parameters: Record<string, unknown>;
+}
+
+interface WorkflowDefinition {
+  name: string;
+  description: string;
+  tasks: WorkflowTask[];
+  error?: string;
+  prompt?: string;
+}
+
+interface WorkflowDefinitionError {
+  error: string;
+  prompt: string;
+}
+
+/**
  * Tool definitions for MCP
  * These match the capabilities defined in server.json
  */
@@ -321,7 +361,7 @@ router.post('/mcp/tools/:toolName', authenticateToken, async (req: Request, res:
     // to the appropriate automation endpoint
     
     // Map MCP tool calls to existing automation endpoints
-    let result: any;
+    let result: ToolExecutionResult;
     
     switch (toolName) {
       case 'workflow_create':
@@ -428,7 +468,7 @@ router.get('/mcp/resources/:resourceName', authenticateToken, async (req: Reques
 
   try {
     // Resource access would integrate with existing data retrieval
-    let data: any;
+    let data: ResourceData;
     
     switch (resourceName) {
       case 'workflows':
@@ -539,7 +579,7 @@ router.post('/mcp/prompts/:promptName', authenticateToken, async (req: Request, 
 
   try {
     // Prompt execution creates a workflow based on the prompt template
-    let workflowDefinition: any;
+    let workflowDefinition: WorkflowDefinition | WorkflowDefinitionError;
     
     switch (promptName) {
       case 'scrape_website':

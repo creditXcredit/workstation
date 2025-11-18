@@ -8,6 +8,44 @@ import express, { Express } from 'express';
 import mcpRoutes from '../src/routes/mcp';
 import { generateDemoToken } from '../src/auth/jwt';
 
+/**
+ * Type definitions for test responses
+ */
+interface Tool {
+  name: string;
+  description: string;
+  inputSchema: object;
+}
+
+interface Resource {
+  name: string;
+  description: string;
+  mimeType: string;
+  uri: string;
+}
+
+interface Prompt {
+  name: string;
+  description: string;
+  arguments: Array<{
+    name: string;
+    description: string;
+    required: boolean;
+  }>;
+}
+
+interface MCPToolsResponse {
+  tools: Tool[];
+}
+
+interface MCPResourcesResponse {
+  resources: Resource[];
+}
+
+interface MCPPromptsResponse {
+  prompts: Prompt[];
+}
+
 describe('MCP Routes', () => {
   let app: Express;
   let token: string;
@@ -125,7 +163,8 @@ describe('MCP Routes', () => {
       expect(response.body).toHaveProperty('resources');
       expect(Array.isArray(response.body.resources)).toBe(true);
       
-      const resourceNames = response.body.resources.map((r: any) => r.name);
+      const typedResponse = response.body as MCPResourcesResponse;
+      const resourceNames = typedResponse.resources.map((r: Resource) => r.name);
       expect(resourceNames).toContain('workflows');
       expect(resourceNames).toContain('screenshots');
       expect(resourceNames).toContain('page_content');
@@ -171,7 +210,8 @@ describe('MCP Routes', () => {
       expect(response.body).toHaveProperty('prompts');
       expect(Array.isArray(response.body.prompts)).toBe(true);
       
-      const promptNames = response.body.prompts.map((p: any) => p.name);
+      const typedResponse = response.body as MCPPromptsResponse;
+      const promptNames = typedResponse.prompts.map((p: Prompt) => p.name);
       expect(promptNames).toContain('scrape_website');
       expect(promptNames).toContain('fill_form');
       expect(promptNames).toContain('monitor_page');
@@ -285,12 +325,13 @@ describe('MCP Routes', () => {
         .set('Authorization', `Bearer ${token}`)
         .expect(200);
 
-      response.body.tools.forEach((tool: any) => {
+      const typedResponse = response.body as MCPToolsResponse;
+      typedResponse.tools.forEach((tool: Tool) => {
         expect(tool.inputSchema).toHaveProperty('type', 'object');
         expect(tool.inputSchema).toHaveProperty('properties');
         
-        if (tool.inputSchema.required) {
-          expect(Array.isArray(tool.inputSchema.required)).toBe(true);
+        if ('required' in tool.inputSchema) {
+          expect(Array.isArray((tool.inputSchema as any).required)).toBe(true);
         }
       });
     });
