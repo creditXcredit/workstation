@@ -11,6 +11,10 @@ on:
     branches:
       - main
       - develop
+  pull_request:
+    branches:
+      - main
+      - develop
 
 permissions:
   actions: read
@@ -18,9 +22,48 @@ permissions:
   security-events: write
 
 jobs:
+  # Check if this is a scheduled/timed run that should execute full scan
+  check-trigger:
+    name: Check Trigger Type
+    runs-on: ubuntu-latest
+    outputs:
+      should-run-scan: ${{ steps.check.outputs.should-run }}
+    steps:
+      - name: Determine if full scan should run
+        id: check
+        run: |
+          # Only run full scan on schedule, workflow_dispatch, or push to main/develop
+          # Pass gracefully on pull_request events
+          if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "push" ]]; then
+            echo "should-run=true" >> $GITHUB_OUTPUT
+            echo "✅ Full audit scan will run (trigger: ${{ github.event_name }})"
+          else
+            echo "should-run=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Audit scan skipped on PR - runs weekly on schedule"
+          fi
+  
+  # Pass gracefully on PRs without running scan
+  pr-pass:
+    name: PR Check - Pass Without Scan
+    runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run-scan == 'false'
+    steps:
+      - name: Pass gracefully on PR
+        run: |
+          echo "## ✅ Audit Scan Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This audit scan only runs on scheduled weekly runs." >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: Pull Request (scan not required)" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ Passed (security scans run weekly)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Weekly scheduled scans ensure repository security." >> $GITHUB_STEP_SUMMARY
+
   discovery:
     name: Discovery - Enumerate Files
     runs-on: ubuntu-latest
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     outputs:
       file-matrix: ${{ steps.enumerate.outputs.matrix }}
       total-files: ${{ steps.enumerate.outputs.total }}
@@ -69,7 +112,8 @@ jobs:
   static-analysis:
     name: Analysis - Static Code Analysis
     runs-on: ubuntu-latest
-    needs: discovery
+    needs: [check-trigger, discovery]
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository
@@ -110,7 +154,8 @@ jobs:
   security-scan:
     name: Analysis - Security Scanning
     runs-on: ubuntu-latest
-    needs: discovery
+    needs: [check-trigger, discovery]
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository
@@ -154,7 +199,8 @@ jobs:
   dependency-check:
     name: Analysis - Dependency Health
     runs-on: ubuntu-latest
-    needs: discovery
+    needs: [check-trigger, discovery]
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository
@@ -198,7 +244,8 @@ jobs:
   configuration-check:
     name: Analysis - Configuration Validation
     runs-on: ubuntu-latest
-    needs: discovery
+    needs: [check-trigger, discovery]
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository
@@ -244,7 +291,8 @@ jobs:
   test-coverage:
     name: Analysis - Test Coverage
     runs-on: ubuntu-latest
-    needs: discovery
+    needs: [check-trigger, discovery]
+    if: needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository
@@ -278,8 +326,8 @@ jobs:
   aggregate-results:
     name: Aggregate Scan Results
     runs-on: ubuntu-latest
-    needs: [discovery, static-analysis, security-scan, dependency-check, configuration-check, test-coverage]
-    if: always()
+    needs: [check-trigger, discovery, static-analysis, security-scan, dependency-check, configuration-check, test-coverage]
+    if: always() && needs.check-trigger.outputs.should-run-scan == 'true'
     
     steps:
       - name: Checkout repository

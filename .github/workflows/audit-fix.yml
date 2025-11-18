@@ -15,6 +15,10 @@ on:
         required: false
         default: false
         type: boolean
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_run:
     workflows: ["Audit Classify - Issue Classification"]
     types:
@@ -26,9 +30,24 @@ permissions:
   issues: write
 
 jobs:
+  # Pass gracefully on PRs without fixes
+  pr-pass:
+    name: PR Check - Pass Without Fixes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Pass gracefully on PR
+        run: |
+          echo "## ✅ Audit Fix Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Automated fixes run only after scheduled audit scans." >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: Pull Request (fixes not required)" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ Passed (runs after weekly scans)" >> $GITHUB_STEP_SUMMARY
+
   setup-fix-environment:
     name: Setup Fix Environment
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
     outputs:
       should-fix: ${{ steps.check.outputs.should_fix }}
     

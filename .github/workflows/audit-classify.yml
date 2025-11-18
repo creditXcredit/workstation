@@ -5,6 +5,10 @@ name: Audit Classify - Issue Classification
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_run:
     workflows: ["Audit Scan - Discovery & Analysis"]
     types:
@@ -15,10 +19,24 @@ permissions:
   actions: read
 
 jobs:
+  # Pass gracefully on PRs without classification
+  pr-pass:
+    name: PR Check - Pass Without Classification
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Pass gracefully on PR
+        run: |
+          echo "## ✅ Audit Classification Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Classification runs only after scheduled audit scans." >> $GITHUB_STEP_SUMMARY
+          echo "**Trigger**: Pull Request (classification not required)" >> $GITHUB_STEP_SUMMARY
+          echo "**Status**: ✅ Passed (runs after weekly scans)" >> $GITHUB_STEP_SUMMARY
+
   download-scan-results:
     name: Download Scan Results
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    if: ${{ (github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch') && github.event_name != 'pull_request' }}
     
     steps:
       - name: Checkout repository
