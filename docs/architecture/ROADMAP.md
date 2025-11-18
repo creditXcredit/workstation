@@ -536,7 +536,7 @@ tasks:
 - [ ] All 20+ agents implemented and tested ⚠️ **40% COMPLETE**
   - ✅ Browser agent complete
   - ✅ Agent registry operational (`src/automation/agents/core/registry.ts`)
-  - ✅ 19 agent directories created with infrastructure
+  - ✅ 17 agent directories created with infrastructure
   - ❌ Data agents (CSV, JSON, Excel, PDF) - pending
   - ❌ Integration agents (email, sheets) - pending
   - ❌ Storage agents - pending
