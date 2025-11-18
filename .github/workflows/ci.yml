@@ -72,7 +72,7 @@ jobs:
         run: npm ci
       
       - name: Run TruffleHog secret scan
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.91.0
         with:
           path: ./
           base: ""
