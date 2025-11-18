@@ -66,6 +66,7 @@ npm test       # ✅ PASS - 146/146 tests passing
    - Upload coverage reports (Codecov)
 
 2. **security**
+   - TruffleHog secret scan (automatic, no license required)
    - npm audit (continue-on-error: true)
    - audit-ci (continue-on-error: true)
 
@@ -86,29 +87,40 @@ npm test       # ✅ PASS - 146/146 tests passing
 
 ### ✅ Secret Scanning Configuration
 
-**Separate Workflow: `.github/workflows/secret-scan.yml`**
+**Integrated into Main CI Workflow**
+
+TruffleHog is now **automatically included** in the Security Audit job of the main CI workflow (`.github/workflows/ci.yml`). This ensures secret scanning runs on every PR and push without any additional configuration.
 
 **Design Philosophy: No Key = No Failure**
-- Secret scanning is completely separated from main CI workflow
-- Primary scanner (TruffleHog) is free and always available
-- Gitleaks is optional and never blocks CI when disabled
+- TruffleHog is integrated directly into the Security Audit job
+- No license required - completely free and open source
+- Runs automatically on every CI build
+- Never blocks CI even if secrets are found (continue-on-error: true)
 
-**Jobs:**
-1. **trufflehog-scan** - Open-source secret scanning (no license required)
-   - Primary secret scanner
-   - Always runs on push/PR
+**Main CI Workflow - Security Job:**
+1. **TruffleHog secret scan** - Automatic inclusion (NEW)
+   - Runs on every push/PR as part of Security Audit
+   - Scans entire git history
+   - No license or configuration required
    - Free alternative that never fails CI
    
-2. **github-secret-scanning-info** - Instructions for enabling GitHub native scanning
+2. **npm audit** - Dependency vulnerability scanning
+   
+3. **audit-ci** - Known vulnerability checks
 
+**Separate Optional Workflow: `.github/workflows/secret-scan.yml`**
+
+For additional scanning capabilities, a separate workflow is available:
+
+1. **trufflehog-scan** - Duplicate scan for additional visibility
+2. **github-secret-scanning-info** - Instructions for enabling GitHub native scanning
 3. **gitleaks-scan** (optional - BYOK)
    - Only runs if `vars.ENABLE_GITLEAKS == 'true'`
    - Requires `GITLEAKS_LICENSE` secret
    - **If not enabled: Job is skipped (no failure)**
    - If enabled without license: Fails gracefully with `continue-on-error: true`
-   - Properly configured for organization repos
 
-**Status**: ✅ **No-key-no-failure strategy implemented** - TruffleHog provides free scanning, Gitleaks is optional add-on
+**Status**: ✅ **TruffleHog automatically included in main CI** - No setup required, runs on every build
 
 ---
 
