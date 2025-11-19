@@ -85,13 +85,22 @@ open docs/landing.html
 - **Simple Dashboard**: JWT and API testing
 - **Control Center**: Advanced workflow management
 
-### 🔄 MCP Repository Sync (NEW!)
+### 🔄 MCP Repository Sync
 - **Automated Sync**: Monitors private MCP repo every 5 minutes
 - **Branch Watching**: Tracks main, develop, staging branches
 - **Merge Detection**: Auto-triggers updates on merge events
 - **Rollback System**: One-command rollback with 10 snapshots
 - **Full Integration**: GitHub Actions automation included
 - 📖 [Quick Start Guide](docs/MCP_SYNC_QUICKSTART.md) | [Full Documentation](docs/MCP_SYNC_SYSTEM.md)
+
+### 🔒 GitHub Private Immutable Backup (NEW!)
+- **Immutable Storage**: Full `.github-private` repository backup in dedicated MCP container
+- **Daily Snapshots**: Automated daily backups with 30-day retention
+- **One-Command Restore**: Instant restore from any snapshot
+- **GitHub Actions Integration**: Automated daily sync at 2 AM UTC
+- **Space Efficient**: Hardlink-based snapshots minimize storage overhead
+- **Security First**: Non-root container with isolated backup network
+- 📖 [Setup Guide](docs/GITHUB_PRIVATE_BACKUP_SETUP.md) | [Container README](mcp-containers/github-private-backup-mcp/README.md)
 
 ### 🚀 Deployment Ready
 - **Railway**: One-click deployment
