@@ -1,10 +1,18 @@
 /**
  * Workstation Chrome Extension - Content Script
- * Runs on all pages to enable action recording
+ * Runs on all pages to enable action recording with Playwright auto-waiting
  */
+
+// Import Playwright utilities (inline for content script)
+import { PlaywrightAutoWait } from './playwright/auto-wait.js';
+import { PlaywrightNetworkMonitor } from './playwright/network.js';
 
 let isRecording = false;
 let recordedActions = [];
+
+// Initialize Playwright components
+const networkMonitor = PlaywrightNetworkMonitor.getInstance();
+networkMonitor.setupInterception();
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -31,16 +39,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return true;
 });
 
-// Capture user interactions when recording
-document.addEventListener('click', (e) => {
+// Capture user interactions when recording with Playwright selector strategies
+document.addEventListener('click', async (e) => {
   if (isRecording) {
     const element = e.target;
-    const selector = getElementSelector(element);
+    
+    // Get multiple selector strategies for robustness
+    const strategies = PlaywrightAutoWait.getSelectorStrategies(element);
+    const selector = strategies[0]; // Primary strategy
+    
     const actionData = {
       agent_type: 'browser',
       action: 'click',
       parameters: { 
         selector,
+        alternativeSelectors: strategies.slice(1), // Fallback strategies
         text: element.textContent?.trim().substring(0, 50) || ''
       },
       timestamp: Date.now()
@@ -56,18 +69,25 @@ document.addEventListener('click', (e) => {
     
     // Visual feedback
     highlightElement(element);
+    
+    console.log('🎯 Recorded click with strategies:', strategies.slice(0, 3));
   }
 }, true);
 
-document.addEventListener('input', (e) => {
+document.addEventListener('input', async (e) => {
   if (isRecording && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
     const element = e.target;
-    const selector = getElementSelector(element);
+    
+    // Get multiple selector strategies for robustness
+    const strategies = PlaywrightAutoWait.getSelectorStrategies(element);
+    const selector = strategies[0]; // Primary strategy
+    
     const actionData = {
       agent_type: 'browser',
       action: 'type',
       parameters: { 
-        selector, 
+        selector,
+        alternativeSelectors: strategies.slice(1), // Fallback strategies
         text: element.value,
         type: element.type || 'text'
       },
@@ -84,6 +104,8 @@ document.addEventListener('input', (e) => {
     
     // Visual feedback
     highlightElement(element);
+    
+    console.log('⌨️ Recorded input with strategies:', strategies.slice(0, 3));
   }
 });
 
@@ -113,43 +135,14 @@ new MutationObserver(() => {
 }).observe(document, { subtree: true, childList: true });
 
 /**
- * Get a unique selector for an element
+ * Get a unique selector for an element (legacy function, now uses Playwright strategies)
  * @param {HTMLElement} element - The element
  * @returns {string} CSS selector
  */
 function getElementSelector(element) {
-  // Try ID first
-  if (element.id) {
-    return `#${element.id}`;
-  }
-  
-  // Try name attribute
-  if (element.name) {
-    return `[name="${element.name}"]`;
-  }
-  
-  // Try data-testid or data-test
-  if (element.dataset.testid) {
-    return `[data-testid="${element.dataset.testid}"]`;
-  }
-  
-  if (element.dataset.test) {
-    return `[data-test="${element.dataset.test}"]`;
-  }
-  
-  // Try class if it's unique
-  if (element.className && typeof element.className === 'string') {
-    const classes = element.className.split(' ').filter(c => c);
-    if (classes.length > 0) {
-      const classSelector = `.${classes.join('.')}`;
-      if (document.querySelectorAll(classSelector).length === 1) {
-        return classSelector;
-      }
-    }
-  }
-  
-  // Fall back to nth-child
-  return `${element.tagName.toLowerCase()}:nth-child(${getChildIndex(element)})`;
+  // Use Playwright's multi-strategy selector system
+  const strategies = PlaywrightAutoWait.getSelectorStrategies(element);
+  return strategies[0] || `${element.tagName.toLowerCase()}:nth-child(${getChildIndex(element)})`;
 }
 
 /**
