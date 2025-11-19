@@ -22,16 +22,10 @@ Workstation is a **production-ready** browser automation platform that combines:
 - 💾 **Data persistence** - SQLite/PostgreSQL workflow storage (✅ LIVE)
 - 🎨 **Web dashboard** - Beautiful UI for management (✅ LIVE)
 - 🐳 **Easy deployment** - Docker, Railway, or local (✅ LIVE)
-Workstation is a comprehensive browser automation platform that combines:
-- 🤖 **Playwright-based browser control** - Navigate, click, type, extract, screenshot
-- 🔐 **Enterprise JWT authentication** - Secure API with rate limiting and CORS
-- 🔄 **Workflow orchestration** - Multi-step automation with retry logic
-- 💾 **Data persistence** - SQLite/PostgreSQL workflow storage
-- 🎨 **Web dashboard** - Beautiful UI for management
-- 🐳 **Easy deployment** - Docker, Railway, or local
-- 🔌 **MCP Integration** - Model Context Protocol for GitHub Copilot and AI agents
+- 🔌 **MCP Integration** - Model Context Protocol for GitHub Copilot and AI agents (✅ LIVE)
+- 🛠️ **Coding Agent Service** - REST API for Git operations, branch management, and PR automation (✅ NEW)
 
-**Perfect for:** Web scraping, form automation, E2E testing, monitoring, data collection, and AI-powered browser automation.
+**Perfect for:** Web scraping, form automation, E2E testing, monitoring, data collection, AI-powered browser automation, and automated code deployment workflows.
 
 **Current Status**: 
 - ✅ **Phase 1 Complete**: Full browser automation with 7 core actions
@@ -158,6 +152,8 @@ open docs/landing.html
 | [📅 Project Timeline](PROJECT_TIMELINE.md) | Complete development history |
 | [🚀 Development Phases](DEVELOPMENT_PHASES.md) | Detailed phase documentation |
 | [📘 User Guide](docs/guides/HOW_TO_USE_BROWSER_AGENT.md) | Complete usage manual |
+| [🛠️ Coding Agent Guide](docs/guides/CODING_AGENT.md) | Git operations REST API guide |
+| [⚡ Quick Reference](docs/guides/CODING_AGENT_QUICK_REF.md) | Coding agent quick reference |
 | [🔌 API Reference](docs/api/API.md) | REST API documentation |
 | [📋 Data Schemas](docs/SCHEMAS.md) | JSON schemas for workflows & agents |
 | [🏗️ Architecture](docs/architecture/ARCHITECTURE.md) | System design overview |
