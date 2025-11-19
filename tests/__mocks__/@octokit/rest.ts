@@ -9,27 +9,27 @@ export class Octokit {
 
   pulls = {
     list: jest.fn().mockResolvedValue({ data: [] }),
-    create: jest.fn().mockResolvedValue({ 
-      data: { 
-        number: 1, 
-        title: 'Test PR',
-        html_url: 'https://github.com/test/test/pull/1',
-        state: 'open',
-        head: { ref: 'test-branch' },
-        base: { ref: 'main' },
+    create: jest.fn().mockResolvedValue({
+      data: {
+        number: 1,
+        title: "Test PR",
+        html_url: "https://github.com/test/test/pull/1",
+        state: "open",
+        head: { ref: "test-branch" },
+        base: { ref: "main" },
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        user: { login: 'testuser' }
-      } 
+        user: { login: "testuser" },
+      },
     }),
   };
 
   repos = {
     get: jest.fn().mockResolvedValue({
       data: {
-        name: 'workstation',
-        owner: { login: 'creditXcredit' }
-      }
+        name: "workstation",
+        owner: { login: "creditXcredit" },
+      },
     }),
   };
 }
