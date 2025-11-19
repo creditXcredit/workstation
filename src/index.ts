@@ -29,6 +29,7 @@ import { validateEnvironment, printEnvironmentSummary } from './utils/env';
 import automationRoutes from './routes/automation';
 import mcpRoutes from './routes/mcp';
 import gitRoutes from './routes/git';
+import gitopsRoutes from './routes/gitops';
 import { initializeDatabase, getDatabase } from './automation/db/database';
 
 // Load environment variables
@@ -222,6 +223,9 @@ app.use('/api/v2', mcpRoutes);
 
 // Git operations routes for coding agent
 app.use('/api/v2', gitRoutes);
+
+// Git operations API (protected) - low-level ops for automation agents
+app.use('/api/v2/gitops', gitopsRoutes);
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
