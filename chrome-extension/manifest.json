@@ -44,7 +44,10 @@
         "playwright/auto-wait.js",
         "playwright/network.js",
         "playwright/retry.js",
-        "playwright/execution.js"
+        "playwright/execution.js",
+        "playwright/self-healing.js",
+        "playwright/form-filling.js",
+        "playwright/trace-recorder.js"
       ],
       "matches": ["<all_urls>"]
     }

@@ -20,11 +20,15 @@ const REQUIRED_FILES = [
   'icons/icon16.png',
   'icons/icon48.png',
   'icons/icon128.png',
-  // New Playwright files
+  // Playwright modules (Phase 1-8)
   'playwright/auto-wait.js',
   'playwright/network.js',
   'playwright/retry.js',
-  'playwright/execution.js'
+  'playwright/execution.js',
+  // New agentic modules (Phase 9)
+  'playwright/self-healing.js',
+  'playwright/form-filling.js',
+  'playwright/trace-recorder.js'
 ];
 
 console.log('🧪 Testing Chrome Extension Build with Playwright Features\n');
@@ -98,7 +102,10 @@ const playwrightModules = [
   { file: 'playwright/auto-wait.js', exportClass: 'PlaywrightAutoWait' },
   { file: 'playwright/network.js', exportClass: 'PlaywrightNetworkMonitor' },
   { file: 'playwright/retry.js', exportClass: 'PlaywrightRetryManager' },
-  { file: 'playwright/execution.js', exportClass: 'PlaywrightExecution' }
+  { file: 'playwright/execution.js', exportClass: 'PlaywrightExecution' },
+  { file: 'playwright/self-healing.js', exportClass: 'SelfHealingSelectors' },
+  { file: 'playwright/form-filling.js', exportClass: 'FormFillingAgent' },
+  { file: 'playwright/trace-recorder.js', exportClass: 'TraceRecorder' }
 ];
 
 playwrightModules.forEach(({ file, exportClass }) => {
@@ -154,7 +161,10 @@ const features = [
   { name: 'PlaywrightRetryManager import', check: () => backgroundContent.includes('PlaywrightRetryManager') },
   { name: 'PlaywrightAutoWait in content', check: () => contentContent.includes('PlaywrightAutoWait') },
   { name: 'PlaywrightNetworkMonitor in content', check: () => contentContent.includes('PlaywrightNetworkMonitor') },
-  { name: 'getSelectorStrategies usage', check: () => contentContent.includes('getSelectorStrategies') }
+  { name: 'getSelectorStrategies usage', check: () => contentContent.includes('getSelectorStrategies') },
+  { name: 'SelfHealingSelectors in content', check: () => contentContent.includes('SelfHealingSelectors') },
+  { name: 'FormFillingAgent in content', check: () => contentContent.includes('FormFillingAgent') },
+  { name: 'TraceRecorder in content', check: () => contentContent.includes('TraceRecorder') }
 ];
 
 features.forEach(({ name, check }) => {
@@ -181,6 +191,9 @@ if (allTestsPassed) {
   console.log('   ✨ Self-healing workflows');
   console.log('   ✨ Network monitoring');
   console.log('   ✨ Automatic retries');
+  console.log('   ✨ Self-healing selectors (8 strategies)');
+  console.log('   ✨ Form filling with LLM integration');
+  console.log('   ✨ Trace recording & analysis');
   process.exit(0);
 } else {
   console.error('❌ Some tests failed. Please fix the issues above.');

@@ -6,6 +6,9 @@
 // Import Playwright utilities (inline for content script)
 import { PlaywrightAutoWait } from './playwright/auto-wait.js';
 import { PlaywrightNetworkMonitor } from './playwright/network.js';
+import { SelfHealingSelectors } from './playwright/self-healing.js';
+import { FormFillingAgent } from './playwright/form-filling.js';
+import { TraceRecorder } from './playwright/trace-recorder.js';
 
 let isRecording = false;
 let recordedActions = [];
@@ -14,26 +17,71 @@ let recordedActions = [];
 const networkMonitor = PlaywrightNetworkMonitor.getInstance();
 networkMonitor.setupInterception();
 
+const selfHealingSelectors = new SelfHealingSelectors();
+const formFillingAgent = new FormFillingAgent();
+const traceRecorder = new TraceRecorder();
+
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startRecording') {
     isRecording = true;
     recordedActions = [];
+    
+    // Start trace recording
+    traceRecorder.startTrace({ name: 'User Recording' });
+    
     console.log('⏺️ Recording started');
     sendResponse({ success: true });
   }
   
   if (request.action === 'stopRecording') {
     isRecording = false;
+    
+    // Stop trace recording
+    const trace = traceRecorder.stopTrace();
+    
     console.log('⏹️ Recording stopped:', recordedActions);
     
     // Send recorded actions to background
     chrome.runtime.sendMessage({ 
       action: 'recordingComplete', 
-      actions: recordedActions 
+      actions: recordedActions,
+      trace: trace
     });
     
     sendResponse({ success: true, count: recordedActions.length });
+  }
+  
+  // Form detection and filling
+  if (request.action === 'detectForms') {
+    const forms = formFillingAgent.detectForms();
+    sendResponse({ success: true, forms });
+  }
+  
+  if (request.action === 'fillForm') {
+    formFillingAgent.fillForm(request.formInfo, request.data, request.options)
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // Async response
+  }
+  
+  // Self-healing selector testing
+  if (request.action === 'findElementSelfHealing') {
+    selfHealingSelectors.findElement(request.selector, request.options)
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true; // Async response
+  }
+  
+  // Trace management
+  if (request.action === 'getTraces') {
+    const traces = traceRecorder.getAllTraces();
+    sendResponse({ success: true, traces });
+  }
+  
+  if (request.action === 'analyzeTrace') {
+    const analysis = traceRecorder.analyzeTrace(request.traceId);
+    sendResponse({ success: true, analysis });
   }
   
   return true;
@@ -44,9 +92,25 @@ document.addEventListener('click', async (e) => {
   if (isRecording) {
     const element = e.target;
     
+    // Record in trace
+    traceRecorder.recordClick({
+      selector: selfHealingSelectors.generateSelector(element),
+      text: element.textContent?.trim().substring(0, 50) || '',
+      tagName: element.tagName,
+      coordinates: { x: e.clientX, y: e.clientY }
+    });
+    
     // Get multiple selector strategies for robustness
     const strategies = PlaywrightAutoWait.getSelectorStrategies(element);
     const selector = strategies[0]; // Primary strategy
+    
+    // Also get self-healing strategies
+    const selfHealingStrategies = [
+      element.getAttribute('data-testid') ? `[data-testid="${element.getAttribute('data-testid')}"]` : null,
+      element.getAttribute('role') ? `[role="${element.getAttribute('role')}"]` : null,
+      element.id ? `#${element.id}` : null,
+      element.name ? `[name="${element.name}"]` : null
+    ].filter(Boolean);
     
     const actionData = {
       agent_type: 'browser',
@@ -54,6 +118,7 @@ document.addEventListener('click', async (e) => {
       parameters: { 
         selector,
         alternativeSelectors: strategies.slice(1), // Fallback strategies
+        selfHealingSelectors: selfHealingStrategies,
         text: element.textContent?.trim().substring(0, 50) || ''
       },
       timestamp: Date.now()
