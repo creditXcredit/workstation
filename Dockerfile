@@ -23,12 +23,12 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine
 
-# Install git for Git operations
-RUN apk add --no-cache git
+# Install git and gh for GitOps operations
+RUN apk add --no-cache git github-cli
 
 # Add OCI standard labels for image metadata
 LABEL org.opencontainers.image.title="stackBrowserAgent"
-LABEL org.opencontainers.image.description="Lightweight, secure JWT-based authentication service built with Express.js and TypeScript"
+LABEL org.opencontainers.image.description="Lightweight, secure JWT-based authentication service with GitOps support"
 LABEL org.opencontainers.image.vendor="creditXcredit"
 LABEL org.opencontainers.image.source="https://github.com/creditXcredit/workstation"
 LABEL org.opencontainers.image.documentation="https://github.com/creditXcredit/workstation/blob/main/README.md"
@@ -41,6 +41,12 @@ ARG VERSION
 LABEL org.opencontainers.image.created="${BUILD_DATE}"
 LABEL org.opencontainers.image.revision="${VCS_REF}"
 LABEL org.opencontainers.image.version="${VERSION}"
+
+# Add custom labels for rollback support
+LABEL workstation.build.date="${BUILD_DATE}"
+LABEL workstation.git.commit="${VCS_REF}"
+LABEL workstation.version="${VERSION}"
+LABEL workstation.rollback.supported="true"
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \

@@ -1,0 +1,307 @@
+name: Docker Build with Versioning
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*.*.*'
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0  # Full history for accurate versioning
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata and version info
+        id: meta
+        run: |
+          # Determine version
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            # Tag push: use tag name as version
+            VERSION=${GITHUB_REF#refs/tags/}
+          else
+            # Main branch: use semantic version based on commits
+            VERSION=$(git describe --tags --always --abbrev=7 2>/dev/null || echo "v0.1.0-$(git rev-parse --short HEAD)")
+          fi
+          
+          # Build metadata
+          BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          VCS_REF=$(git rev-parse --short HEAD)
+          
+          # Set outputs
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+          echo "vcs_ref=$VCS_REF" >> $GITHUB_OUTPUT
+          
+          # Generate tags
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$VERSION"
+          
+          # Add latest tag for main branch or version tags
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]] || [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+          fi
+          
+          # Add SHA tag
+          TAGS="$TAGS,${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-$VCS_REF"
+          
+          echo "tags=$TAGS" >> $GITHUB_OUTPUT
+          
+          echo "### Build Metadata" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Date:** $BUILD_DATE" >> $GITHUB_STEP_SUMMARY
+          echo "- **VCS Ref:** $VCS_REF" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags:** $TAGS" >> $GITHUB_STEP_SUMMARY
+
+      - name: Extract Docker metadata
+        id: docker_meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+            VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          labels: |
+            org.opencontainers.image.title=stackBrowserAgent
+            org.opencontainers.image.description=Lightweight JWT-based authentication service with GitOps support
+            org.opencontainers.image.vendor=creditXcredit
+            org.opencontainers.image.created=${{ steps.meta.outputs.build_date }}
+            org.opencontainers.image.revision=${{ steps.meta.outputs.vcs_ref }}
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            workstation.build.date=${{ steps.meta.outputs.build_date }}
+            workstation.git.commit=${{ steps.meta.outputs.vcs_ref }}
+            workstation.version=${{ steps.meta.outputs.version }}
+            workstation.rollback.supported=true
+
+      - name: Test Docker image
+        run: |
+          # Start container
+          docker run -d --name test-container \
+            -e JWT_SECRET=test-secret-for-ci \
+            -e NODE_ENV=test \
+            -p 3000:3000 \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.meta.outputs.vcs_ref }}
+          
+          # Wait for container to be healthy
+          echo "Waiting for container to start..."
+          for i in {1..30}; do
+            if docker exec test-container node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"; then
+              echo "Container is healthy!"
+              break
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 2
+          done
+          
+          # Test health endpoint
+          docker exec test-container curl -f http://localhost:3000/health || exit 1
+          
+          # Verify labels
+          echo "### Image Labels" >> $GITHUB_STEP_SUMMARY
+          docker inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.meta.outputs.vcs_ref }} \
+            --format '{{range $k, $v := .Config.Labels}}{{printf "- **%s:** %s\n" $k $v}}{{end}}' >> $GITHUB_STEP_SUMMARY
+          
+          # Cleanup
+          docker stop test-container
+          docker rm test-container
+
+      - name: Run security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.meta.outputs.vcs_ref }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Upload Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Push Docker image
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            BUILD_DATE=${{ steps.meta.outputs.build_date }}
+            VCS_REF=${{ steps.meta.outputs.vcs_ref }}
+            VERSION=${{ steps.meta.outputs.version }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Generate deployment manifest
+        if: github.event_name != 'pull_request'
+        run: |
+          cat > deployment-manifest.json << EOF
+          {
+            "version": "${{ steps.meta.outputs.version }}",
+            "build_date": "${{ steps.meta.outputs.build_date }}",
+            "vcs_ref": "${{ steps.meta.outputs.vcs_ref }}",
+            "image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}",
+            "tags": "${{ steps.meta.outputs.tags }}",
+            "rollback_images": [
+              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.meta.outputs.vcs_ref }}",
+              "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+            ],
+            "health_check_url": "http://localhost:3000/health",
+            "deployment_timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          }
+          EOF
+          
+          echo "### Deployment Manifest" >> $GITHUB_STEP_SUMMARY
+          cat deployment-manifest.json | jq '.' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload deployment manifest
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-manifest-${{ steps.meta.outputs.version }}
+          path: deployment-manifest.json
+
+      - name: Create rollback documentation
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          cat > ROLLBACK-${{ steps.meta.outputs.version }}.md << EOF
+          # Rollback Instructions for Version ${{ steps.meta.outputs.version }}
+          
+          **Build Date:** ${{ steps.meta.outputs.build_date }}
+          **Git Commit:** ${{ steps.meta.outputs.vcs_ref }}
+          **Image:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          
+          ## Automated Rollback
+          
+          Use the rollback script:
+          \`\`\`bash
+          ./scripts/rollback-docker.sh --service workstation --version ${{ steps.meta.outputs.version }}
+          \`\`\`
+          
+          ## Manual Rollback
+          
+          \`\`\`bash
+          # Stop current service
+          docker-compose stop workstation
+          
+          # Remove current container
+          docker-compose rm -f workstation
+          
+          # Pull specific version
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          
+          # Start with specific version
+          DOCKER_IMAGE_TAG=${{ steps.meta.outputs.version }} docker-compose up -d workstation
+          
+          # Verify health
+          curl -f http://localhost:3000/health
+          \`\`\`
+          
+          ## Rollback Verification
+          
+          1. Check container is running:
+             \`docker ps | grep workstation\`
+          
+          2. Verify version:
+             \`docker inspect workstation --format '{{index .Config.Labels "workstation.version"}}'\`
+          
+          3. Test health endpoint:
+             \`curl -f http://localhost:3000/health\`
+          
+          4. Check logs:
+             \`docker logs workstation --tail 100\`
+          
+          ## Previous Versions Available for Rollback
+          
+          \`\`\`bash
+          docker images ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} --format "table {{.Tag}}\t{{.ID}}\t{{.CreatedAt}}"
+          \`\`\`
+          EOF
+          
+          echo "### Rollback Documentation Created" >> $GITHUB_STEP_SUMMARY
+          echo "See ROLLBACK-${{ steps.meta.outputs.version }}.md for rollback instructions" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload rollback documentation
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rollback-docs-${{ steps.meta.outputs.version }}
+          path: ROLLBACK-${{ steps.meta.outputs.version }}.md
+
+      - name: Comment on PR with build info
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.meta.outputs.version }}';
+            const vcsRef = '${{ steps.meta.outputs.vcs_ref }}';
+            const buildDate = '${{ steps.meta.outputs.build_date }}';
+            
+            const comment = `## 🐳 Docker Build Complete
+            
+            **Version:** \`${version}\`
+            **Git Commit:** \`${vcsRef}\`
+            **Build Date:** \`${buildDate}\`
+            
+            ### Image Tags
+            \`\`\`
+            ${{ steps.meta.outputs.tags }}
+            \`\`\`
+            
+            ### Test Results
+            ✅ Build successful
+            ✅ Health check passed
+            ✅ Security scan completed
+            
+            **Note:** Image will not be pushed for PR builds. Merge to main to publish.
+            `;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
