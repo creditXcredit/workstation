@@ -10,6 +10,20 @@ if (process.env.NODE_ENV !== 'test' && (!process.env.JWT_SECRET || process.env.J
   throw new Error('Unsafe JWT_SECRET configured. Server will not start.');
 }
 
+// CRITICAL: Global error handlers must be registered early
+// These handlers prevent unhandled errors from crashing the process silently
+process.on('uncaughtException', (err: Error) => {
+  console.error('FATAL: Unhandled exception:', err);
+  console.error('Stack trace:', err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  console.error('FATAL: Unhandled promise rejection:', reason);
+  console.error('Promise:', promise);
+  process.exit(1);
+});
+
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -24,20 +38,10 @@ import { getHealthStatus } from './utils/health';
 import { validateEnvironment, printEnvironmentSummary } from './utils/env';
 // Phase 1: Import automation routes and database
 import automationRoutes from './routes/automation';
+import mcpRoutes from './routes/mcp';
+import gitRoutes from './routes/git';
+import gitopsRoutes from './routes/gitops';
 import { initializeDatabase, getDatabase } from './automation/db/database';
-
-// 🛡️ Fail-Fast Global Error Handlers - MUST be before server initialization
-process.on('uncaughtException', (err) => {
-  console.error('❌ FATAL: Unhandled exception:', err);
-  logger.error('Unhandled exception - shutting down', { error: err.message, stack: err.stack });
-  process.exit(1);
-});
-
-process.on('unhandledRejection', (err) => {
-  console.error('❌ FATAL: Unhandled promise rejection:', err);
-  logger.error('Unhandled promise rejection - shutting down', { error: err });
-  process.exit(1);
-});
 
 // Validate environment configuration
 const envConfig = validateEnvironment();
@@ -207,6 +211,15 @@ app.get('/api/agent/status', authenticateToken, (req: Request, res: Response) =>
 
 // Phase 1: Mount automation routes
 app.use('/api/v2', automationRoutes);
+
+// MCP routes for GitHub Copilot integration
+app.use('/api/v2', mcpRoutes);
+
+// Git operations routes for coding agent
+app.use('/api/v2', gitRoutes);
+
+// Git operations API (protected) - low-level ops for automation agents
+app.use('/api/v2/gitops', gitopsRoutes);
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
