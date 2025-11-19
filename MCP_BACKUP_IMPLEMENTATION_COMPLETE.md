@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-Successfully implemented a complete immutable backup infrastructure for the `creditXcredit/.github-private` repository with automated daily backups, restore capabilities, and GitHub Actions integration. This system provides the foundation for backing up all creditXcredit repositories in the future.
+Successfully implemented a complete immutable backup infrastructure for the `creditXcredit/mcp-private` repository with automated daily backups, restore capabilities, and GitHub Actions integration. This system provides the foundation for backing up all creditXcredit repositories in the future.
 
 **Status**: ✅ **READY FOR USE**
 
@@ -63,7 +63,7 @@ data/github-private-backup/
 **Workflow Steps**:
 1. Build backup container
 2. Start container with health check
-3. Sync with `.github-private` repository
+3. Sync with `mcp-private` repository
 4. Auto-create snapshot if updates detected
 5. Report status and disk usage
 6. Upload logs as artifacts
@@ -160,14 +160,14 @@ The backup container complements the existing `mcp-sync.sh` system:
 
 **Current Flow**:
 ```
-creditXcredit/.github-private (GitHub)
+creditXcredit/mcp-private (GitHub)
     ↓ mcp-sync.sh every 5 minutes
 .mcp-clone/ (local working copy)
 ```
 
 **With Backup Container**:
 ```
-creditXcredit/.github-private (GitHub)
+creditXcredit/mcp-private (GitHub)
     ↓ Daily backup @ 2 AM UTC
 github-private-backup Container
     ├── /backup/immutable/  (Master copy)
@@ -194,8 +194,8 @@ Other MCP containers can access backup data:
 services:
   mcp-agent:
     volumes:
-      # Read-only access to .github-private data
-      - github-private-immutable:/config/.github-private:ro
+      # Read-only access to mcp-private data
+      - github-private-immutable:/config/mcp-private:ro
 ```
 
 ### 3. CI/CD Pipeline
@@ -417,7 +417,7 @@ This infrastructure serves as a **template for all future repository backups**:
 ## Maintenance Schedule
 
 ### Daily (Automated)
-- ✅ Sync with `.github-private` at 2 AM UTC
+- ✅ Sync with `mcp-private` at 2 AM UTC
 - ✅ Create snapshot if updates detected
 - ✅ Clean snapshots older than 30 days
 
@@ -492,7 +492,7 @@ This infrastructure serves as a **template for all future repository backups**:
 
 The MCP container backup infrastructure is **complete and ready for use**. It provides:
 
-✅ **Immutable Backup**: Full `.github-private` repository stored securely  
+✅ **Immutable Backup**: Full `mcp-private` repository stored securely  
 ✅ **Daily Automation**: Hands-off operation via GitHub Actions  
 ✅ **30-Day History**: Point-in-time recovery capability  
 ✅ **One-Command Restore**: Fast disaster recovery  

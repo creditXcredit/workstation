@@ -2,14 +2,14 @@
 
 ## Overview
 
-This guide walks you through setting up the immutable backup infrastructure for the `creditXcredit/.github-private` repository with automated daily backups.
+This guide walks you through setting up the immutable backup infrastructure for the `creditXcredit/mcp-private` repository with automated daily backups.
 
 ## Prerequisites
 
 Before starting, ensure you have:
 
 - [x] Docker and Docker Compose installed
-- [x] Access to `creditXcredit/.github-private` repository
+- [x] Access to `creditXcredit/mcp-private` repository
 - [x] GitHub Personal Access Token with `repo` scope
 - [x] Admin access to workstation repository for GitHub Secrets
 
@@ -107,7 +107,7 @@ The GitHub Actions workflow `.github/workflows/github-private-daily-backup.yml` 
 **Schedule**: Daily at 2 AM UTC
 
 **Actions performed**:
-1. Syncs with `.github-private` repository
+1. Syncs with `mcp-private` repository
 2. Creates snapshot if updates detected
 3. Maintains 30-day snapshot retention
 4. Reports status in workflow summary
@@ -170,7 +170,7 @@ Update `mcp-sync-config.json` to reference the backup container:
   "mcp": {
     "sourceRepo": {
       "owner": "creditXcredit",
-      "name": ".github-private",
+      "name": "mcp-private",
       "defaultBranch": "main"
     },
     "localPath": "data/github-private-backup/immutable",
@@ -308,7 +308,7 @@ docker exec github-private-backup backup-manager init
 
 ### Issue: Repository Not Syncing
 
-**Symptom**: "Already up-to-date" but changes exist in .github-private
+**Symptom**: "Already up-to-date" but changes exist in mcp-private
 
 **Solutions**:
 ```bash
@@ -380,7 +380,7 @@ docker exec github-private-backup find /backup/snapshots -name "*.tar.gz" -mtime
 ## Maintenance Schedule
 
 ### Daily (Automated)
-- Sync with `.github-private` at 2 AM UTC
+- Sync with `mcp-private` at 2 AM UTC
 - Create snapshot if updates detected
 - Clean snapshots older than 30 days
 
@@ -426,7 +426,7 @@ For issues or questions:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    GitHub .github-private                    │
+│                    GitHub mcp-private                    │
 │                    (Source of Truth)                         │
 └────────────────────────┬────────────────────────────────────┘
                          │

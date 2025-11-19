@@ -94,7 +94,7 @@ open docs/landing.html
 - 📖 [Quick Start Guide](docs/MCP_SYNC_QUICKSTART.md) | [Full Documentation](docs/MCP_SYNC_SYSTEM.md)
 
 ### 🔒 GitHub Private Immutable Backup (NEW!)
-- **Immutable Storage**: Full `.github-private` repository backup in dedicated MCP container
+- **Immutable Storage**: Full `mcp-private` repository backup in dedicated MCP container
 - **Daily Snapshots**: Automated daily backups with 30-day retention
 - **One-Command Restore**: Instant restore from any snapshot
 - **GitHub Actions Integration**: Automated daily sync at 2 AM UTC

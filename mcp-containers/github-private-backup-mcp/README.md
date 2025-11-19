@@ -2,7 +2,7 @@
 
 ## Overview
 
-This MCP container provides a secure, immutable backup storage system for the `creditXcredit/.github-private` repository with automated daily snapshots and restore capabilities.
+This MCP container provides a secure, immutable backup storage system for the `creditXcredit/mcp-private` repository with automated daily snapshots and restore capabilities.
 
 ## Features
 
@@ -19,7 +19,7 @@ This MCP container provides a secure, immutable backup storage system for the `c
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- GitHub Personal Access Token with `repo` scope for `.github-private` access
+- GitHub Personal Access Token with `repo` scope for `mcp-private` access
 - Token stored in `GITHUB_TOKEN` environment variable or GitHub Secret
 
 ### Initial Setup
@@ -109,7 +109,7 @@ On host (via Docker volumes):
 
 ### Immutable Repository
 
-- **Purpose**: Acts as the master copy of `.github-private`
+- **Purpose**: Acts as the master copy of `mcp-private`
 - **Updates**: Only updated via `sync` command
 - **Protection**: Read-only for most operations
 - **Location**: `/backup/immutable`
@@ -184,7 +184,7 @@ Update `mcp-sync-config.json` to use the backup container as source:
   "mcp": {
     "sourceRepo": {
       "owner": "creditXcredit",
-      "name": ".github-private",
+      "name": "mcp-private",
       "defaultBranch": "main"
     },
     "localPath": "data/github-private-backup/immutable",
@@ -299,7 +299,7 @@ docker logs --tail 50 github-private-backup
 docker inspect github-private-backup | grep Mounts -A 20
 
 # Test GitHub connectivity
-docker exec github-private-backup curl -s https://api.github.com/repos/creditXcredit/.github-private
+docker exec github-private-backup curl -s https://api.github.com/repos/creditXcredit/mcp-private
 ```
 
 ## Maintenance
@@ -330,7 +330,7 @@ docker exec github-private-backup find /backup/snapshots -name "*.tar.gz" -mtime
 
 ### Storage Requirements
 
-- **Immutable Repo**: ~Size of `.github-private` repository
+- **Immutable Repo**: ~Size of `mcp-private` repository
 - **Each Snapshot**: ~Same size (compressed)
 - **30 Days**: ~30x repository size maximum
 - **Hardlinks**: Save space on uncompressed snapshots

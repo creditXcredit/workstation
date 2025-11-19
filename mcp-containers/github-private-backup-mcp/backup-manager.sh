@@ -39,7 +39,7 @@ case "$COMMAND" in
             exit 1
         fi
         
-        REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/creditXcredit/.github-private.git"
+        REPO_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/creditXcredit/mcp-private.git"
         
         if [ -d "$IMMUTABLE_PATH/.git" ]; then
             log_info "Repository already initialized, pulling latest..."

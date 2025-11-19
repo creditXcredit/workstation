@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   backup-github-private:
-    name: Backup .github-private Repository
+    name: Backup mcp-private Repository
     runs-on: ubuntu-latest
     
     steps:
@@ -68,13 +68,13 @@ jobs:
           echo "✅ Repository initialized successfully" >> $GITHUB_STEP_SUMMARY
         continue-on-error: true
       
-      - name: Sync with .github-private repository
+      - name: Sync with mcp-private repository
         id: sync
         if: github.event.inputs.action == 'sync' || github.event.inputs.action == ''
         env:
           GITHUB_PRIVATE_TOKEN: ${{ secrets.GITHUB_PRIVATE_TOKEN }}
         run: |
-          echo "## 🔄 Syncing with .github-private" >> $GITHUB_STEP_SUMMARY
+          echo "## 🔄 Syncing with mcp-private" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
           # Run sync (this will auto-create snapshot if there are updates)
@@ -170,7 +170,7 @@ jobs:
               title: '🚨 GitHub Private Backup Failed',
               body: `## Backup Failure Report
               
-              The automated daily backup of \`.github-private\` repository failed.
+              The automated daily backup of \`mcp-private\` repository failed.
               
               **Workflow Run:** [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
               **Time:** ${{ github.event.repository.updated_at }}
@@ -180,7 +180,7 @@ jobs:
               
               1. Check the [workflow logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
               2. Verify GitHub token \`GITHUB_PRIVATE_TOKEN\` is valid
-              3. Ensure \`.github-private\` repository is accessible
+              3. Ensure \`mcp-private\` repository is accessible
               4. Run manual backup via workflow dispatch if needed
               
               ### Troubleshooting

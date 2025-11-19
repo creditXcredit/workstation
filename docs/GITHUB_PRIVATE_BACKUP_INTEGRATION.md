@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document explains how the `.github-private` backup container integrates with the workstation MCP infrastructure and enables future repository backups.
+This document explains how the `mcp-private` backup container integrates with the workstation MCP infrastructure and enables future repository backups.
 
 ## Architecture
 
@@ -13,7 +13,7 @@ This document explains how the `.github-private` backup container integrates wit
 │                    GitHub Repositories                        │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌──────────────────┐         ┌──────────────────┐          │
-│  │ .github-private  │         │ workstation      │          │
+│  │ mcp-private  │         │ workstation      │          │
 │  │ (Private Config) │         │ (Main Repo)      │          │
 │  └────────┬─────────┘         └────────┬─────────┘          │
 └───────────┼────────────────────────────┼────────────────────┘
@@ -28,7 +28,7 @@ This document explains how the `.github-private` backup container integrates wit
 │  ┌────────────────────────────────────────────────────┐     │
 │  │  GitHub Private Backup Container (NEW!)            │     │
 │  │  ┌──────────────────────────────────────────────┐ │     │
-│  │  │ /backup/immutable/  (Full .github-private)  │ │     │
+│  │  │ /backup/immutable/  (Full mcp-private)  │ │     │
 │  │  │ /backup/snapshots/  (30-day retention)      │ │     │
 │  │  │ /backup/logs/       (Operation logs)        │ │     │
 │  │  └──────────────────────────────────────────────┘ │     │
@@ -58,7 +58,7 @@ The existing MCP sync system can now use the backup container as a data source:
   "mcp": {
     "sourceRepo": {
       "owner": "creditXcredit",
-      "name": ".github-private",
+      "name": "mcp-private",
       "defaultBranch": "main"
     },
     "localPath": "data/github-private-backup/immutable",
@@ -94,12 +94,12 @@ services:
       - github-private-data:/backup/immutable:rw
       - github-private-snapshots:/backup/snapshots:ro
   
-  # Agent that needs access to .github-private data
+  # Agent that needs access to mcp-private data
   mcp-agent-custom:
     build: ./mcp-containers/custom-agent
     volumes:
       # Read-only access to immutable backup
-      - github-private-data:/data/.github-private:ro
+      - github-private-data:/data/mcp-private:ro
       # Read-only access to snapshots
       - github-private-snapshots:/data/backups:ro
 ```
@@ -129,7 +129,7 @@ The backup workflow integrates with existing CI/CD:
 ### 4. Backup Data Flow
 
 ```
-GitHub .github-private
+GitHub mcp-private
     ↓ (1) Daily Sync @ 2 AM UTC
 github-private-backup Container
     ├── /backup/immutable/  ← Master copy
@@ -318,15 +318,15 @@ jobs:
 
 ### Pattern 1: Read-Only Configuration Access
 
-MCP agents read configuration from `.github-private`:
+MCP agents read configuration from `mcp-private`:
 
 ```yaml
 services:
   mcp-agent:
     volumes:
-      - github-private-data:/config/.github-private:ro
+      - github-private-data:/config/mcp-private:ro
     environment:
-      - CONFIG_PATH=/config/.github-private
+      - CONFIG_PATH=/config/mcp-private
 ```
 
 ### Pattern 2: Snapshot-Based Recovery

@@ -2,7 +2,7 @@
 
 ## What You Got
 
-A complete MCP container infrastructure for immutable daily backups of `creditXcredit/.github-private` with automated restore capabilities.
+A complete MCP container infrastructure for immutable daily backups of `creditXcredit/mcp-private` with automated restore capabilities.
 
 ## Setup in 3 Steps (5 Minutes)
 
@@ -39,7 +39,7 @@ export GITHUB_PRIVATE_TOKEN="ghp_your_token_here"
 # ✅ Create directories
 # ✅ Build container
 # ✅ Start container
-# ✅ Clone .github-private
+# ✅ Clone mcp-private
 # ✅ Create first snapshot
 ```
 
@@ -60,7 +60,7 @@ docker exec github-private-backup backup-manager status
 
 ## What Happens Next (Automatic)
 
-✅ **Daily at 2 AM UTC**: GitHub Actions syncs with `.github-private`  
+✅ **Daily at 2 AM UTC**: GitHub Actions syncs with `mcp-private`  
 ✅ **If updates found**: Creates compressed snapshot  
 ✅ **After 30 days**: Auto-deletes old snapshots  
 ✅ **If backup fails**: Creates GitHub issue to alert you  
@@ -121,7 +121,7 @@ workstation/
 
 ```
 ┌─────────────────────────────────────┐
-│   GitHub .github-private Repo      │
+│   GitHub mcp-private Repo      │
 │   (Your source of truth)           │
 └──────────────┬──────────────────────┘
                │
@@ -132,7 +132,7 @@ workstation/
 │  GitHub Private Backup Container   │
 │  ┌───────────────────────────────┐ │
 │  │ /backup/immutable/            │ │ ← Full clone
-│  │   └── .github-private/        │ │
+│  │   └── mcp-private/        │ │
 │  ├───────────────────────────────┤ │
 │  │ /backup/snapshots/            │ │ ← 30-day history
 │  │   ├── snapshot-20241119.tar.gz│ │
@@ -200,7 +200,7 @@ Want to backup other repos? It's easy! Use this as a template:
 ## Summary
 
 You now have:
-- 🔒 **Immutable backup** of `.github-private`
+- 🔒 **Immutable backup** of `mcp-private`
 - 📅 **Daily snapshots** for 30 days
 - 🔄 **Automated sync** via GitHub Actions
 - ⚡ **Quick restore** from any snapshot
