@@ -64,6 +64,13 @@ jobs:
           npm install -g typedoc
           npx typedoc --out docs-generated src
         continue-on-error: true
+        run: npx madge --image dependency-graph.svg --extensions ts,js .
+        continue-on-error: true  # Don't fail build if madge has issues
+      
+      - name: Generate documentation
+        if: matrix.node-version == '20.x'
+        run: npx typedoc --out docs/api src --skipErrorChecking
+        continue-on-error: true  # Don't fail build if typedoc has issues
       
       - name: Upload dependency graph
         if: matrix.node-version == '20.x'
