@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      # 📊 Install Graphviz for dependency graph generation (required by madge)
+      - name: Install Graphviz
+        run: sudo apt-get update && sudo apt-get install -y graphviz
       # 🔥 Install Playwright Browsers (Full) - REQUIRED for browser automation tests
       - name: Install Playwright Browsers (Full)
         if: matrix.node-version == '20.x'
@@ -91,6 +94,15 @@ jobs:
       
       # 📦 Component Mapping & Documentation Generation (only on Node 20.x)
       - name: Generate dependency map
+        run: |
+          npm install -g madge
+          madge --image dependency-graph.svg --extensions ts,js src
+        continue-on-error: true  # Don't fail build if madge has issues
+      
+      - name: Generate documentation
+        run: |
+          npm install -g typedoc
+          npx typedoc --out docs-generated src
         if: matrix.node-version == '20.x'
         run: |
           npm install -g madge
