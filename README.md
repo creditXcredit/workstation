@@ -212,8 +212,10 @@ npm run test:chrome
 
 | Document | Description |
 |----------|-------------|
-| [📊 Repository Statistics](REPOSITORY_STATS.md) | **NEW!** Complete activity & progression stats |
-| [📅 Activity Timeline](ACTIVITY_TIMELINE.md) | **NEW!** Visual development timeline & milestones |
+| [📊 Statistics Overview](STATS_OVERVIEW.md) | **NEW!** Quick dashboard with key metrics & visualizations |
+| [📊 Repository Statistics](REPOSITORY_STATS.md) | **NEW!** Complete activity & progression stats (16KB) |
+| [📅 Activity Timeline](ACTIVITY_TIMELINE.md) | **NEW!** Visual development timeline & milestones (12KB) |
+| [🛣️ Roadmap Progress](ROADMAP_PROGRESS.md) | **NEW!** Detailed phase completion tracking (15KB) |
 | [📖 Documentation Index](docs/DOCUMENTATION_INDEX.md) | Complete navigation of all docs |
 | [🎯 START_HERE.md](START_HERE.md) | 30-second quick start |
 | [🌐 Chrome Extension Guide](chrome-extension/README.md) | Complete Chrome extension documentation |
