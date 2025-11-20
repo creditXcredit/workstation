@@ -25,6 +25,7 @@ Workstation is a **production-ready** browser automation platform that combines:
 - 🔌 **MCP Integration** - Model Context Protocol for GitHub Copilot and AI agents (✅ LIVE)
 - 🛠️ **Coding Agent Service** - REST API for Git operations, branch management, and PR automation (✅ NEW)
 - 🌐 **Chrome Extension** - Browser automation with natural language (✅ NEW)
+- 📊 **Repo Update Agent** - Automated documentation sync running daily at 9 PM UTC (✅ NEW)
 
 **Perfect for:** Web scraping, form automation, E2E testing, monitoring, data collection, AI-powered browser automation, and automated code deployment workflows.
 
@@ -217,9 +218,11 @@ npm run test:chrome
 | [📊 Repository Statistics](REPOSITORY_STATS.md) | **NEW!** Complete activity & progression stats (16KB) |
 | [📅 Activity Timeline](ACTIVITY_TIMELINE.md) | **NEW!** Visual development timeline & milestones (12KB) |
 | [🛣️ Roadmap Progress](ROADMAP_PROGRESS.md) | **NEW!** Detailed phase completion tracking (15KB) |
+| [📋 Repo Update Tasks](REPO_UPDATE_TASKS.md) | **NEW!** Daily documentation sync task list (automated at 9 PM UTC) |
 | [📖 Documentation Index](docs/DOCUMENTATION_INDEX.md) | Complete navigation of all docs |
 | [🎯 START_HERE.md](START_HERE.md) | 30-second quick start |
 | [🌐 Chrome Extension Guide](chrome-extension/README.md) | Complete Chrome extension documentation |
+| [🤖 Repo Update Agent](agents/repo-update-agent/README.md) | **NEW!** Automated documentation sync agent |
 | [📅 Project Timeline](PROJECT_TIMELINE.md) | Complete development history |
 | [🚀 Development Phases](DEVELOPMENT_PHASES.md) | Detailed phase documentation |
 | [📘 User Guide](docs/guides/HOW_TO_USE_BROWSER_AGENT.md) | Complete usage manual |
