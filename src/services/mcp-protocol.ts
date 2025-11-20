@@ -5,6 +5,7 @@
 
 import { getMessageBroker, MCPMessage, TaskMessage, StatusMessage, ResultMessage } from './message-broker';
 import { agentOrchestrator } from './agent-orchestrator';
+import { advancedAutomation } from './advanced-automation';
 
 export interface MCPRequest {
   id: string;
@@ -89,6 +90,175 @@ export class MCPProtocol {
 
     this.registerRequestHandler('screenshot', async (params) => {
       return { method: 'screenshot', params };
+    });
+
+    // Advanced Browser Automation - Multi-Tab Management
+    this.registerRequestHandler('open_tab', async (params) => {
+      const { url } = params;
+      const tabId = await advancedAutomation.openNewTab(url);
+      return { tabId, url };
+    });
+
+    this.registerRequestHandler('switch_tab', async (params) => {
+      const { tabId } = params;
+      await advancedAutomation.switchToTab(tabId);
+      return { success: true, tabId };
+    });
+
+    this.registerRequestHandler('close_tab', async (params) => {
+      const { tabId } = params;
+      await advancedAutomation.closeTab(tabId);
+      return { success: true };
+    });
+
+    this.registerRequestHandler('list_tabs', async () => {
+      const tabs = await advancedAutomation.listTabs();
+      return { tabs };
+    });
+
+    this.registerRequestHandler('close_all_tabs', async () => {
+      await advancedAutomation.closeAllTabs();
+      return { success: true };
+    });
+
+    // Advanced Browser Automation - iFrame Handling
+    this.registerRequestHandler('switch_to_iframe', async (params) => {
+      const { selector } = params;
+      await advancedAutomation.switchToIframe(selector);
+      return { success: true, selector };
+    });
+
+    this.registerRequestHandler('switch_to_main_frame', async () => {
+      await advancedAutomation.switchToMainFrame();
+      return { success: true };
+    });
+
+    this.registerRequestHandler('execute_in_iframe', async (params) => {
+      const { selector, actions } = params;
+      await advancedAutomation.executeInIframe(selector, actions);
+      return { success: true, actionsExecuted: actions.length };
+    });
+
+    // Advanced Browser Automation - File Operations
+    this.registerRequestHandler('upload_file', async (params) => {
+      const { selector, filePath } = params;
+      await advancedAutomation.uploadFile(selector, filePath);
+      return { success: true, filePath };
+    });
+
+    this.registerRequestHandler('download_file', async (params) => {
+      const { url, savePath } = params;
+      const downloadPath = await advancedAutomation.downloadFile(url, savePath);
+      return { success: true, downloadPath };
+    });
+
+    this.registerRequestHandler('wait_for_download', async (params) => {
+      const { timeout } = params;
+      const downloadPath = await advancedAutomation.waitForDownload(timeout);
+      return { success: true, downloadPath };
+    });
+
+    // Advanced Browser Automation - Advanced Interactions
+    this.registerRequestHandler('hover', async (params) => {
+      const { selector, duration } = params;
+      await advancedAutomation.hover(selector, duration);
+      return { success: true, selector };
+    });
+
+    this.registerRequestHandler('drag_and_drop', async (params) => {
+      const { sourceSelector, targetSelector } = params;
+      await advancedAutomation.dragAndDrop(sourceSelector, targetSelector);
+      return { success: true };
+    });
+
+    this.registerRequestHandler('send_keys', async (params) => {
+      const { keys } = params;
+      await advancedAutomation.sendKeys(keys);
+      return { success: true, keys };
+    });
+
+    this.registerRequestHandler('press_key', async (params) => {
+      const { key } = params;
+      await advancedAutomation.pressKey(key);
+      return { success: true, key };
+    });
+
+    // Advanced Browser Automation - Network Monitoring
+    this.registerRequestHandler('start_network_monitoring', async () => {
+      await advancedAutomation.startNetworkMonitoring();
+      return { success: true, monitoring: true };
+    });
+
+    this.registerRequestHandler('stop_network_monitoring', async () => {
+      const requests = await advancedAutomation.stopNetworkMonitoring();
+      return { success: true, requestCount: requests.length, requests };
+    });
+
+    this.registerRequestHandler('intercept_request', async (params) => {
+      const { pattern, handler } = params;
+      await advancedAutomation.interceptRequest(pattern, handler);
+      return { success: true, pattern };
+    });
+
+    this.registerRequestHandler('block_request', async (params) => {
+      const { pattern } = params;
+      await advancedAutomation.blockRequest(pattern);
+      return { success: true, pattern };
+    });
+
+    // Advanced Browser Automation - Browser Profiles
+    this.registerRequestHandler('save_browser_profile', async (params) => {
+      const { name } = params;
+      await advancedAutomation.saveBrowserProfile(name);
+      return { success: true, profileName: name };
+    });
+
+    this.registerRequestHandler('load_browser_profile', async (params) => {
+      const { name } = params;
+      await advancedAutomation.loadBrowserProfile(name);
+      return { success: true, profileName: name };
+    });
+
+    this.registerRequestHandler('list_profiles', async () => {
+      const profiles = await advancedAutomation.listProfiles();
+      return { profiles };
+    });
+
+    // Advanced Browser Automation - Screenshot & Recording
+    this.registerRequestHandler('take_full_page_screenshot', async (params) => {
+      const { path } = params;
+      const screenshotPath = await advancedAutomation.takeFullPageScreenshot(path);
+      return { success: true, screenshotPath };
+    });
+
+    this.registerRequestHandler('start_video_recording', async (params) => {
+      const { path } = params;
+      await advancedAutomation.startVideoRecording(path);
+      return { success: true, recording: true };
+    });
+
+    this.registerRequestHandler('stop_video_recording', async () => {
+      const videoPath = await advancedAutomation.stopVideoRecording();
+      return { success: true, videoPath };
+    });
+
+    // Advanced Browser Automation - Advanced Waiting
+    this.registerRequestHandler('wait_for_element', async (params) => {
+      const { selector, timeout, visible } = params;
+      await advancedAutomation.waitForElement(selector, { timeout, visible });
+      return { success: true, selector };
+    });
+
+    this.registerRequestHandler('wait_for_navigation', async (params) => {
+      const { timeout, waitUntil } = params;
+      await advancedAutomation.waitForNavigation({ timeout, waitUntil });
+      return { success: true };
+    });
+
+    this.registerRequestHandler('wait_for_function', async (params) => {
+      const { fn, timeout, polling } = params;
+      await advancedAutomation.waitForFunction(fn, { timeout, polling });
+      return { success: true };
     });
 
     // Agent health check

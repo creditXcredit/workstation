@@ -7,6 +7,9 @@ import WebSocket from 'ws';
 import { Server as HTTPServer } from 'http';
 import { getMCPProtocol, MCPRequest, MCPResponse } from './mcp-protocol';
 import { getMessageBroker } from './message-broker';
+import { authenticateWebSocket, wsRateLimiter } from '../middleware/websocket-auth';
+import { activeWebsocketConnections } from './monitoring';
+import { logger } from '../utils/logger';
 
 export interface MCPWebSocketMessage {
   type: 'request' | 'response' | 'notification' | 'subscribe' | 'unsubscribe';
@@ -35,12 +38,36 @@ export class MCPWebSocketServer {
   }
 
   private setupServer(): void {
-    this.wss.on('connection', (ws: WebSocket, req: any) => {
+    this.wss.on('connection', async (ws: WebSocket, req: any) => {
+      // Authenticate WebSocket connection
+      const authResult = await authenticateWebSocket(req);
+      
+      if (!authResult.authenticated) {
+        logger.warn('[MCPWebSocket] Authentication failed', { error: authResult.error });
+        ws.close(1008, authResult.error); // Policy Violation
+        return;
+      }
+
+      const userId = authResult.user?.userId || 'anonymous';
+      
+      // Check rate limiting
+      if (!wsRateLimiter.canConnect(userId)) {
+        logger.warn('[MCPWebSocket] Connection rate limit exceeded', { userId });
+        ws.close(1008, 'Too many connections');
+        return;
+      }
+
+      // Track connection for rate limiting
+      wsRateLimiter.trackConnection(userId);
+
       const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       this.clients.set(clientId, ws);
       this.subscriptions.set(clientId, new Set());
 
-      console.log(`[MCPWebSocket] Client connected: ${clientId}`);
+      // Update metrics
+      activeWebsocketConnections.inc();
+
+      logger.info('[MCPWebSocket] Client connected', { clientId, userId });
 
       // Send welcome message
       this.send(ws, {
@@ -48,6 +75,7 @@ export class MCPWebSocketServer {
         method: 'connected',
         params: {
           clientId,
+          userId,
           timestamp: new Date().toISOString(),
           config: this.mcpProtocol.getChromeExtensionConfig(),
         },
@@ -55,10 +83,23 @@ export class MCPWebSocketServer {
 
       ws.on('message', async (data: WebSocket.Data) => {
         try {
+          // Rate limit messages
+          if (!wsRateLimiter.canSendMessage(userId)) {
+            this.send(ws, {
+              type: 'response',
+              id: 'rate-limit',
+              error: {
+                code: 429,
+                message: 'Message rate limit exceeded',
+              },
+            });
+            return;
+          }
+
           const message: MCPWebSocketMessage = JSON.parse(data.toString());
           await this.handleMessage(clientId, ws, message);
         } catch (error) {
-          console.error('[MCPWebSocket] Error handling message:', error);
+          logger.error('[MCPWebSocket] Error handling message', { error });
           this.send(ws, {
             type: 'response',
             id: 'error',
@@ -71,18 +112,22 @@ export class MCPWebSocketServer {
       });
 
       ws.on('close', () => {
-        console.log(`[MCPWebSocket] Client disconnected: ${clientId}`);
+        logger.info('[MCPWebSocket] Client disconnected', { clientId });
         this.unsubscribeAll(clientId);
         this.clients.delete(clientId);
         this.subscriptions.delete(clientId);
+        
+        // Update tracking
+        wsRateLimiter.untrackConnection(userId);
+        activeWebsocketConnections.dec();
       });
 
       ws.on('error', (error) => {
-        console.error(`[MCPWebSocket] Client error (${clientId}):`, error);
+        logger.error('[MCPWebSocket] Client error', { clientId, error });
       });
     });
 
-    console.log('[MCPWebSocket] WebSocket server initialized on path /mcp');
+    logger.info('[MCPWebSocket] WebSocket server initialized on path /mcp with authentication');
   }
 
   private async handleMessage(clientId: string, ws: WebSocket, message: MCPWebSocketMessage): Promise<void> {
@@ -187,7 +232,7 @@ export class MCPWebSocketServer {
       },
     });
 
-    console.log(`[MCPWebSocket] Client ${clientId} subscribed to ${channel}`);
+    logger.info('[MCPWebSocket] Client subscribed to channel', { clientId, channel });
   }
 
   private async handleUnsubscribe(clientId: string, ws: WebSocket, message: MCPWebSocketMessage): Promise<void> {
@@ -221,13 +266,13 @@ export class MCPWebSocketServer {
       },
     });
 
-    console.log(`[MCPWebSocket] Client ${clientId} unsubscribed from ${channel}`);
+    logger.info('[MCPWebSocket] Client unsubscribed from channel', { clientId, channel });
   }
 
   private async handleNotification(message: MCPWebSocketMessage): Promise<void> {
     // Handle notifications from Chrome extension (e.g., user actions, events)
     if (message.method) {
-      console.log(`[MCPWebSocket] Notification: ${message.method}`, message.params);
+      logger.info('[MCPWebSocket] Notification received', { method: message.method });
       
       // Forward to appropriate handler or broadcast to agents
       if (message.params?.agentId) {
@@ -319,7 +364,7 @@ export class MCPWebSocketServer {
    */
   close(): void {
     this.wss.close(() => {
-      console.log('[MCPWebSocket] Server closed');
+      logger.info('[MCPWebSocket] Server closed');
     });
   }
 }
