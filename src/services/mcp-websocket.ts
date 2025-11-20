@@ -9,6 +9,7 @@ import { getMCPProtocol, MCPRequest, MCPResponse } from './mcp-protocol';
 import { getMessageBroker } from './message-broker';
 import { authenticateWebSocket, wsRateLimiter } from '../middleware/websocket-auth';
 import { activeWebsocketConnections } from './monitoring';
+import { logger } from '../utils/logger';
 
 export interface MCPWebSocketMessage {
   type: 'request' | 'response' | 'notification' | 'subscribe' | 'unsubscribe';
@@ -42,7 +43,7 @@ export class MCPWebSocketServer {
       const authResult = await authenticateWebSocket(req);
       
       if (!authResult.authenticated) {
-        console.warn(`[MCPWebSocket] Authentication failed: ${authResult.error}`);
+        logger.warn('[MCPWebSocket] Authentication failed', { error: authResult.error });
         ws.close(1008, authResult.error); // Policy Violation
         return;
       }
@@ -51,7 +52,7 @@ export class MCPWebSocketServer {
       
       // Check rate limiting
       if (!wsRateLimiter.canConnect(userId)) {
-        console.warn(`[MCPWebSocket] Connection rate limit exceeded for user: ${userId}`);
+        logger.warn('[MCPWebSocket] Connection rate limit exceeded', { userId });
         ws.close(1008, 'Too many connections');
         return;
       }
@@ -66,7 +67,7 @@ export class MCPWebSocketServer {
       // Update metrics
       activeWebsocketConnections.inc();
 
-      console.log(`[MCPWebSocket] Client connected: ${clientId} (user: ${userId})`);
+      logger.info('[MCPWebSocket] Client connected', { clientId, userId });
 
       // Send welcome message
       this.send(ws, {
@@ -98,7 +99,7 @@ export class MCPWebSocketServer {
           const message: MCPWebSocketMessage = JSON.parse(data.toString());
           await this.handleMessage(clientId, ws, message);
         } catch (error) {
-          console.error('[MCPWebSocket] Error handling message:', error);
+          logger.error('[MCPWebSocket] Error handling message', { error });
           this.send(ws, {
             type: 'response',
             id: 'error',
@@ -111,7 +112,7 @@ export class MCPWebSocketServer {
       });
 
       ws.on('close', () => {
-        console.log(`[MCPWebSocket] Client disconnected: ${clientId}`);
+        logger.info('[MCPWebSocket] Client disconnected', { clientId });
         this.unsubscribeAll(clientId);
         this.clients.delete(clientId);
         this.subscriptions.delete(clientId);
@@ -122,11 +123,11 @@ export class MCPWebSocketServer {
       });
 
       ws.on('error', (error) => {
-        console.error(`[MCPWebSocket] Client error (${clientId}):`, error);
+        logger.error('[MCPWebSocket] Client error', { clientId, error });
       });
     });
 
-    console.log('[MCPWebSocket] WebSocket server initialized on path /mcp with authentication');
+    logger.info('[MCPWebSocket] WebSocket server initialized on path /mcp with authentication');
   }
 
   private async handleMessage(clientId: string, ws: WebSocket, message: MCPWebSocketMessage): Promise<void> {
@@ -231,7 +232,7 @@ export class MCPWebSocketServer {
       },
     });
 
-    console.log(`[MCPWebSocket] Client ${clientId} subscribed to ${channel}`);
+    logger.info('[MCPWebSocket] Client subscribed to channel', { clientId, channel });
   }
 
   private async handleUnsubscribe(clientId: string, ws: WebSocket, message: MCPWebSocketMessage): Promise<void> {
@@ -265,13 +266,13 @@ export class MCPWebSocketServer {
       },
     });
 
-    console.log(`[MCPWebSocket] Client ${clientId} unsubscribed from ${channel}`);
+    logger.info('[MCPWebSocket] Client unsubscribed from channel', { clientId, channel });
   }
 
   private async handleNotification(message: MCPWebSocketMessage): Promise<void> {
     // Handle notifications from Chrome extension (e.g., user actions, events)
     if (message.method) {
-      console.log(`[MCPWebSocket] Notification: ${message.method}`, message.params);
+      logger.info('[MCPWebSocket] Notification received', { method: message.method });
       
       // Forward to appropriate handler or broadcast to agents
       if (message.params?.agentId) {
@@ -363,7 +364,7 @@ export class MCPWebSocketServer {
    */
   close(): void {
     this.wss.close(() => {
-      console.log('[MCPWebSocket] Server closed');
+      logger.info('[MCPWebSocket] Server closed');
     });
   }
 }

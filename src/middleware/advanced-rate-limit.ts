@@ -57,11 +57,13 @@ function createRedisRateLimiter(options: {
   // Only use Redis store if Redis is enabled and client is available
   if (useRedis && redisClient) {
     try {
-      config.store = new RedisStore({
-        // @ts-expect-error - Redis client typing issue with rate-limit-redis
+      // Type assertion for RedisStore client compatibility
+      // RedisStore expects specific Redis client interface which ioredis implements
+      const storeConfig: any = {
         client: redisClient,
         prefix: 'rl:',
-      });
+      };
+      config.store = new RedisStore(storeConfig);
     } catch (error) {
       console.warn('Failed to create Redis store for rate limiter, using memory store:', (error as Error).message);
     }
