@@ -19,14 +19,16 @@ This repository represents a **comprehensive, enterprise-grade automation platfo
 | Metric | Value | Details |
 |--------|-------|---------|
 | **Total Tracked Files** | 753 | All repository files |
-| **TypeScript Source Files** | 116 | Production code |
+| **TypeScript Source Files** | 116 | Production code (src/) |
 | **JavaScript Files** | 34 | Build scripts, configs |
+| **Chrome Extension JS** | 12 | Browser extension code |
 | **Test Files** | 59 | Test suites and specs |
 | **Documentation Files** | 321 | Markdown documentation |
 | **Lines of Production Code** | 8,681 | src/ directory |
+| **Lines of Chrome Extension** | 4,270 | chrome-extension/ directory |
 | **Lines of Test Code** | 2,742 | tests/ directory |
-| **Total Application Code** | 11,423 | Combined TypeScript/JavaScript |
-| **Code-to-Test Ratio** | 3.2:1 | Healthy test coverage |
+| **Total Application Code** | 15,693 | Combined TypeScript/JavaScript |
+| **Code-to-Test Ratio** | 4.7:1 | Healthy test coverage |
 | **Repository Size** | 8.5 MB | Including all assets |
 | **Source Directory Size** | 196 KB | Core application code |
 
