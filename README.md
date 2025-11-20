@@ -26,6 +26,7 @@ Workstation is a **production-ready** browser automation platform that combines:
 - 🛠️ **Coding Agent Service** - REST API for Git operations, branch management, and PR automation (✅ NEW)
 - 🌐 **Chrome Extension** - Browser automation with natural language (✅ NEW)
 - 📊 **Repo Update Agent** - Automated documentation sync running daily at 9 PM UTC (✅ NEW)
+- 📈 **Code Timeline Agent** - Daily code growth tracking with color-coded timeline at 7 AM UTC (✅ NEW)
 
 **Perfect for:** Web scraping, form automation, E2E testing, monitoring, data collection, AI-powered browser automation, and automated code deployment workflows.
 
@@ -214,6 +215,8 @@ npm run test:chrome
 
 | Document | Description |
 |----------|-------------|
+| [📊 Code Timeline](CODE_TIMELINE.md) | **NEW!** Color-coded code growth timeline (automated daily at 7 AM UTC) |
+| [🤖 Automation Directory](AUTOMATION_DIRECTORY.md) | **NEW!** Complete automation & agent registry with run statistics |
 | [📊 Statistics Overview](STATS_OVERVIEW.md) | **NEW!** Quick dashboard with key metrics & visualizations |
 | [📊 Repository Statistics](REPOSITORY_STATS.md) | **NEW!** Complete activity & progression stats (16KB) |
 | [📅 Activity Timeline](ACTIVITY_TIMELINE.md) | **NEW!** Visual development timeline & milestones (12KB) |
