@@ -7,6 +7,8 @@ import WebSocket from 'ws';
 import { Server as HTTPServer } from 'http';
 import { getMCPProtocol, MCPRequest, MCPResponse } from './mcp-protocol';
 import { getMessageBroker } from './message-broker';
+import { authenticateWebSocket, wsRateLimiter } from '../middleware/websocket-auth';
+import { activeWebsocketConnections } from './monitoring';
 
 export interface MCPWebSocketMessage {
   type: 'request' | 'response' | 'notification' | 'subscribe' | 'unsubscribe';
@@ -35,12 +37,36 @@ export class MCPWebSocketServer {
   }
 
   private setupServer(): void {
-    this.wss.on('connection', (ws: WebSocket, req: any) => {
+    this.wss.on('connection', async (ws: WebSocket, req: any) => {
+      // Authenticate WebSocket connection
+      const authResult = await authenticateWebSocket(req);
+      
+      if (!authResult.authenticated) {
+        console.warn(`[MCPWebSocket] Authentication failed: ${authResult.error}`);
+        ws.close(1008, authResult.error); // Policy Violation
+        return;
+      }
+
+      const userId = authResult.user?.userId || 'anonymous';
+      
+      // Check rate limiting
+      if (!wsRateLimiter.canConnect(userId)) {
+        console.warn(`[MCPWebSocket] Connection rate limit exceeded for user: ${userId}`);
+        ws.close(1008, 'Too many connections');
+        return;
+      }
+
+      // Track connection for rate limiting
+      wsRateLimiter.trackConnection(userId);
+
       const clientId = `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       this.clients.set(clientId, ws);
       this.subscriptions.set(clientId, new Set());
 
-      console.log(`[MCPWebSocket] Client connected: ${clientId}`);
+      // Update metrics
+      activeWebsocketConnections.inc();
+
+      console.log(`[MCPWebSocket] Client connected: ${clientId} (user: ${userId})`);
 
       // Send welcome message
       this.send(ws, {
@@ -48,6 +74,7 @@ export class MCPWebSocketServer {
         method: 'connected',
         params: {
           clientId,
+          userId,
           timestamp: new Date().toISOString(),
           config: this.mcpProtocol.getChromeExtensionConfig(),
         },
@@ -55,6 +82,19 @@ export class MCPWebSocketServer {
 
       ws.on('message', async (data: WebSocket.Data) => {
         try {
+          // Rate limit messages
+          if (!wsRateLimiter.canSendMessage(userId)) {
+            this.send(ws, {
+              type: 'response',
+              id: 'rate-limit',
+              error: {
+                code: 429,
+                message: 'Message rate limit exceeded',
+              },
+            });
+            return;
+          }
+
           const message: MCPWebSocketMessage = JSON.parse(data.toString());
           await this.handleMessage(clientId, ws, message);
         } catch (error) {
@@ -75,6 +115,10 @@ export class MCPWebSocketServer {
         this.unsubscribeAll(clientId);
         this.clients.delete(clientId);
         this.subscriptions.delete(clientId);
+        
+        // Update tracking
+        wsRateLimiter.untrackConnection(userId);
+        activeWebsocketConnections.dec();
       });
 
       ws.on('error', (error) => {
@@ -82,7 +126,7 @@ export class MCPWebSocketServer {
       });
     });
 
-    console.log('[MCPWebSocket] WebSocket server initialized on path /mcp');
+    console.log('[MCPWebSocket] WebSocket server initialized on path /mcp with authentication');
   }
 
   private async handleMessage(clientId: string, ws: WebSocket, message: MCPWebSocketMessage): Promise<void> {

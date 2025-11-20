@@ -8,6 +8,7 @@ import { workflowService } from '../automation/workflow/service';
 import { orchestrationEngine } from '../automation/orchestrator/engine';
 import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
 import { logger } from '../utils/logger';
+import { executionRateLimiter } from '../middleware/advanced-rate-limit';
 
 const router = Router();
 
@@ -89,8 +90,9 @@ router.get('/workflows/:id', authenticateToken, async (req: Request, res: Respon
 /**
  * Execute workflow
  * POST /api/v2/workflows/:id/execute
+ * Rate limited: 10 executions per minute per user
  */
-router.post('/workflows/:id/execute', authenticateToken, async (req: Request, res: Response) => {
+router.post('/workflows/:id/execute', executionRateLimiter, authenticateToken, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     
@@ -168,8 +170,9 @@ router.get('/executions/:id/tasks', authenticateToken, async (req: Request, res:
  * Execute workflow from description (Chrome Extension endpoint)
  * POST /api/v2/execute
  * Creates and executes a workflow in one step
+ * Rate limited: 10 executions per minute per user
  */
-router.post('/execute', authenticateToken, async (req: Request, res: Response) => {
+router.post('/execute', executionRateLimiter, authenticateToken, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { description, actions } = req.body;

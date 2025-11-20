@@ -40,7 +40,7 @@ function createRedisRateLimiter(options: {
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
     store: new RedisStore({
-      // @ts-ignore - Redis client typing issue
+      // @ts-expect-error - Redis client typing issue with rate-limit-redis
       client: redisClient,
       prefix: 'rl:',
     }),

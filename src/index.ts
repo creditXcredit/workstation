@@ -46,6 +46,14 @@ import dashboardRoutes from './routes/dashboard';
 import workflowsRoutes from './routes/workflows';
 import agentsRoutes from './routes/agents';
 import { initializeDatabase, getDatabase } from './automation/db/database';
+// Phase 3: Import advanced rate limiting and monitoring
+import { 
+  apiRateLimiter, 
+  authRateLimiter as advancedAuthLimiter,
+  executionRateLimiter,
+  globalRateLimiter 
+} from './middleware/advanced-rate-limit';
+import { initializeMonitoring } from './services/monitoring';
 
 // Validate environment configuration
 const envConfig = validateEnvironment();
@@ -60,6 +68,10 @@ initializeDatabase().then(() => {
 
 const app = express();
 const PORT = envConfig.port;
+
+// Phase 3: Initialize monitoring (includes metrics middleware and /metrics endpoint)
+// Note: This must be done early to capture all HTTP requests
+initializeMonitoring(app);
 
 // Rate limiting configuration
 const limiter = rateLimit({
@@ -130,7 +142,16 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(limiter); // Apply rate limiting to all routes
+
+// Phase 3: Apply global rate limiter with Redis backend (fallback to memory if Redis unavailable)
+// This provides distributed rate limiting across multiple instances
+try {
+  app.use(globalRateLimiter);
+  logger.info('Global rate limiter enabled (Redis-backed)');
+} catch (error) {
+  logger.warn('Global rate limiter fallback to memory-based limiter', { error });
+  app.use(limiter); // Fallback to memory-based rate limiting
+}
 
 // Serve static files from public directory (Dashboard UI)
 const publicPath = join(__dirname, '..', 'public');
@@ -160,44 +181,52 @@ app.use((req: Request, res: Response, next) => {
   next();
 });
 
-// Health check endpoint with enhanced metrics including database status
-app.get('/health', async (req: Request, res: Response) => {
-  const health = getHealthStatus();
-  
-  // Add database health check
-  try {
-    const db = getDatabase();
-    // Simple query to check database connection
-    await db.get('SELECT 1 as test');
-    health.database = { status: 'connected' };
-  } catch (error) {
-    health.database = { status: 'disconnected', error: (error as Error).message };
-    health.status = 'degraded';
-  }
-  
-  const statusCode = health.status === 'ok' ? 200 : 503;
-  res.status(statusCode).json(health);
-});
+// Health check endpoint is now provided by monitoring service
+// See initializeMonitoring() above which adds enhanced /health endpoint
 
-// Generate token endpoint (for testing) - with stricter rate limiting and validation
-app.post('/auth/token', authLimiter, validateRequest(schemas.generateToken), (req: Request, res: Response) => {
-  const { userId, role } = req.body;
+// Generate token endpoint (for testing) - with Redis-backed advanced rate limiting
+try {
+  app.post('/auth/token', advancedAuthLimiter, validateRequest(schemas.generateToken), (req: Request, res: Response) => {
+    const { userId, role } = req.body;
 
-  const token = generateToken({ userId, role });
-  
-  logger.info('Token generated', { userId, role });
-  
-  res.json({ token });
-});
-
-// Demo token endpoint - with stricter rate limiting
-app.get('/auth/demo-token', authLimiter, (req: Request, res: Response) => {
-  const token = generateDemoToken();
-  res.json({ 
-    token,
-    message: 'Use this token for testing. Add it to Authorization header as: Bearer <token>'
+    const token = generateToken({ userId, role });
+    
+    logger.info('Token generated', { userId, role });
+    
+    res.json({ token });
   });
-});
+} catch (error) {
+  // Fallback to memory-based rate limiter if Redis unavailable
+  app.post('/auth/token', authLimiter, validateRequest(schemas.generateToken), (req: Request, res: Response) => {
+    const { userId, role } = req.body;
+
+    const token = generateToken({ userId, role });
+    
+    logger.info('Token generated', { userId, role });
+    
+    res.json({ token });
+  });
+}
+
+// Demo token endpoint - with Redis-backed advanced rate limiting
+try {
+  app.get('/auth/demo-token', advancedAuthLimiter, (req: Request, res: Response) => {
+    const token = generateDemoToken();
+    res.json({ 
+      token,
+      message: 'Use this token for testing. Add it to Authorization header as: Bearer <token>'
+    });
+  });
+} catch (error) {
+  // Fallback to memory-based rate limiter if Redis unavailable
+  app.get('/auth/demo-token', authLimiter, (req: Request, res: Response) => {
+    const token = generateDemoToken();
+    res.json({ 
+      token,
+      message: 'Use this token for testing. Add it to Authorization header as: Bearer <token>'
+    });
+  });
+}
 
 // Protected route example
 app.get('/api/protected', authenticateToken, (req: Request, res: Response) => {
