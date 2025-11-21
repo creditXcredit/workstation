@@ -72,39 +72,44 @@ This document outlines the step-by-step implementation plan for completing the m
 ## Phase 2: Integration Agents (Priority: HIGH)
 **Goal**: Connect workflows to external services
 
-### Step 2.1: Google Sheets Agent
-- [ ] Create `src/automation/agents/integration/sheets.ts`
-- [ ] Implement Google Sheets API integration
-- [ ] Add OAuth2 authentication support
-- [ ] Support read/write operations
-- [ ] Add batch operations support
-- [ ] Wire to agent registry
+### Step 2.1: Google Sheets Agent ✅ COMPLETE
+- [x] Create `src/automation/agents/integration/sheets.ts`
+- [x] Implement Google Sheets API integration
+- [x] Add OAuth2 authentication support
+- [x] Support read/write operations
+- [x] Add batch operations support
+- [x] Wire to agent registry
 - [ ] Add unit tests in `tests/agents/integration/sheets.test.ts`
-- [ ] Update documentation
+- [x] Update documentation
 
 **Capabilities**:
-- `read_sheet`: Read data from Google Sheet
-- `write_sheet`: Write data to Google Sheet
-- `append_rows`: Append rows to sheet
-- `update_cells`: Update specific cells
-- `create_sheet`: Create new sheet in spreadsheet
+- `authenticate`: OAuth2 and Service Account authentication
+- `readSheet`: Read data from Google Sheet
+- `writeSheet`: Write data to Google Sheet (overwrites range)
+- `appendRows`: Append rows to sheet
+- `updateCells`: Update specific cells (batch support)
+- `createSheet`: Create new sheet in spreadsheet
+- `listSheets`: List all sheets in spreadsheet
+- `getSheetInfo`: Get spreadsheet metadata
 
-### Step 2.2: Calendar Agent
-- [ ] Create `src/automation/agents/integration/calendar.ts`
-- [ ] Implement calendar API integration (Google Calendar)
-- [ ] Add OAuth2 authentication support
-- [ ] Support event CRUD operations
-- [ ] Add recurring events support
-- [ ] Wire to agent registry
+### Step 2.2: Calendar Agent ✅ COMPLETE
+- [x] Create `src/automation/agents/integration/calendar.ts`
+- [x] Implement calendar API integration (Google Calendar)
+- [x] Add OAuth2 authentication support
+- [x] Support event CRUD operations
+- [x] Add recurring events support
+- [x] Wire to agent registry
 - [ ] Add unit tests in `tests/agents/integration/calendar.test.ts`
-- [ ] Update documentation
+- [x] Update documentation
 
 **Capabilities**:
-- `create_event`: Create calendar event
-- `list_events`: List events in date range
-- `update_event`: Update existing event
-- `delete_event`: Delete event
-- `check_availability`: Check free/busy status
+- `authenticate`: OAuth2 and Service Account authentication
+- `createEvent`: Create calendar event with date/time
+- `listEvents`: List events in date range
+- `getEvent`: Get event details by ID
+- `updateEvent`: Update existing event
+- `deleteEvent`: Delete event
+- `checkAvailability`: Check free/busy status for time range
 
 ## Phase 3: Storage Agents (Priority: MEDIUM)
 **Goal**: Enable data persistence across various storage systems

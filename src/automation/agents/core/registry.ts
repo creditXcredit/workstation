@@ -5,6 +5,8 @@
 
 import { BrowserAgent } from './browser';
 import { EmailAgent } from '../integration/email';
+import { SheetsAgent } from '../integration/sheets';
+import { CalendarAgent } from '../integration/calendar';
 import { FileAgent } from '../storage/file';
 import { RssAgent } from '../data/rss';
 import { CsvAgent } from '../data/csv';
@@ -59,6 +61,18 @@ export class AgentRegistry {
       agent_type: 'rss',
       actions: ['fetchFeed', 'extractClientInfo', 'buildClientRepository', 'monitorFeeds'],
       description: 'RSS feed parsing and client intelligence gathering'
+    });
+
+    this.registerCapability({
+      agent_type: 'sheets',
+      actions: ['authenticate', 'readSheet', 'writeSheet', 'appendRows', 'updateCells', 'createSheet', 'listSheets', 'getSheetInfo'],
+      description: 'Google Sheets integration with OAuth2 support'
+    });
+
+    this.registerCapability({
+      agent_type: 'calendar',
+      actions: ['authenticate', 'createEvent', 'listEvents', 'getEvent', 'updateEvent', 'deleteEvent', 'checkAvailability'],
+      description: 'Google Calendar integration with OAuth2 support'
     });
 
     // Phase 1: Data agents
@@ -258,6 +272,107 @@ export class AgentRegistry {
               return await rssAgent.monitorFeeds(params as never);
             default:
               throw new Error(`Unknown RSS action: ${action}`);
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 10: Google Sheets agent
+    if (agentType === 'sheets') {
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          // Sheets config should be passed in params
+          const sheetsConfig = (params as any).sheetsConfig || {
+            authType: 'oauth2' as const,
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            redirectUri: process.env.GOOGLE_REDIRECT_URI
+          };
+          
+          const sheetsAgent = new SheetsAgent(sheetsConfig);
+
+          try {
+            switch (action) {
+              case 'authenticate':
+                return await sheetsAgent.authenticate();
+              case 'readSheet':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.readSheet(params as never);
+              case 'writeSheet':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.writeSheet(params as never);
+              case 'appendRows':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.appendRows(params as never);
+              case 'updateCells':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.updateCells(params as never);
+              case 'createSheet':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.createSheet(params as never);
+              case 'listSheets':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.listSheets(params as never);
+              case 'getSheetInfo':
+                await sheetsAgent.authenticate();
+                return await sheetsAgent.getSheetInfo(params as never);
+              default:
+                throw new Error(`Unknown Google Sheets action: ${action}`);
+            }
+          } finally {
+            await sheetsAgent.disconnect();
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 10: Google Calendar agent
+    if (agentType === 'calendar') {
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          // Calendar config should be passed in params
+          const calendarConfig = (params as any).calendarConfig || {
+            authType: 'oauth2' as const,
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            redirectUri: process.env.GOOGLE_REDIRECT_URI
+          };
+          
+          const calendarAgent = new CalendarAgent(calendarConfig);
+
+          try {
+            switch (action) {
+              case 'authenticate':
+                return await calendarAgent.authenticate();
+              case 'createEvent':
+                await calendarAgent.authenticate();
+                return await calendarAgent.createEvent(params as never);
+              case 'listEvents':
+                await calendarAgent.authenticate();
+                return await calendarAgent.listEvents(params as never);
+              case 'getEvent':
+                await calendarAgent.authenticate();
+                return await calendarAgent.getEvent(params as never);
+              case 'updateEvent':
+                await calendarAgent.authenticate();
+                return await calendarAgent.updateEvent(params as never);
+              case 'deleteEvent':
+                await calendarAgent.authenticate();
+                return await calendarAgent.deleteEvent(params as never);
+              case 'checkAvailability':
+                await calendarAgent.authenticate();
+                return await calendarAgent.checkAvailability(params as never);
+              default:
+                throw new Error(`Unknown Google Calendar action: ${action}`);
+            }
+          } finally {
+            await calendarAgent.disconnect();
           }
         }
       };
