@@ -4,7 +4,7 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
+import { authenticateToken } from '../auth/jwt';
 import { logger } from '../utils/logger';
 import {
   getEntityStore,

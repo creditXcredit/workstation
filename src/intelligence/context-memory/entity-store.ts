@@ -5,7 +5,6 @@
  * Provides deduplication, query interface, and integration hooks for agents.
  */
 
-import { Database } from 'sqlite';
 import { getDatabase, generateId, getCurrentTimestamp } from '../../automation/db/database';
 import { logger } from '../../utils/logger';
 import {
