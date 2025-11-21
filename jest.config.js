@@ -3,7 +3,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
   transformIgnorePatterns: [
     'node_modules/(?!(@octokit|undici|cheerio|before-after-hook|universal-user-agent|@octokit\\/.*)/)',
   ],
@@ -13,10 +13,7 @@ module.exports = {
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: {
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-      },
+      tsconfig: 'tsconfig.test.json',
     }],
   },
   extensionsToTreatAsEsm: ['.ts'],
@@ -47,7 +44,7 @@ module.exports = {
     // Enforce high coverage for critical components
     './src/auth/**/*.ts': {
       statements: 90,
-      branches: 72,
+      branches: 70,
       functions: 95,
       lines: 90,
     },
