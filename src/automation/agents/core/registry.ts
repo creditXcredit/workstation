@@ -7,6 +7,8 @@ import { BrowserAgent } from './browser';
 import { EmailAgent } from '../integration/email';
 import { FileAgent } from '../storage/file';
 import { RssAgent } from '../data/rss';
+import { CsvAgent } from '../data/csv';
+import { JsonAgent } from '../data/json';
 import { logger } from '../../../utils/logger';
 
 export interface AgentCapability {
@@ -55,6 +57,19 @@ export class AgentRegistry {
       agent_type: 'rss',
       actions: ['fetchFeed', 'extractClientInfo', 'buildClientRepository', 'monitorFeeds'],
       description: 'RSS feed parsing and client intelligence gathering'
+    });
+
+    // Phase 1: Data agents
+    this.registerCapability({
+      agent_type: 'csv',
+      actions: ['parseCsv', 'writeCsv', 'filterCsv', 'transformCsv', 'getStats'],
+      description: 'CSV data parsing, transformation, and analysis'
+    });
+
+    this.registerCapability({
+      agent_type: 'json',
+      actions: ['parseJson', 'queryJson', 'validateJson', 'transformJson', 'stringifyJson', 'mergeJson'],
+      description: 'JSON data parsing, querying, validation, and transformation'
     });
 
     logger.info('Default agents registered', { count: this.capabilities.length });
@@ -229,6 +244,62 @@ export class AgentRegistry {
               return await rssAgent.monitorFeeds(params as never);
             default:
               throw new Error(`Unknown RSS action: ${action}`);
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 1: CSV agent
+    if (agentType === 'csv') {
+      const csvAgent = new CsvAgent();
+
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          switch (action) {
+            case 'parseCsv':
+              return await csvAgent.parseCsv(params as never);
+            case 'writeCsv':
+              return await csvAgent.writeCsv(params as never);
+            case 'filterCsv':
+              return await csvAgent.filterCsv(params as never);
+            case 'transformCsv':
+              return await csvAgent.transformCsv(params as never);
+            case 'getStats':
+              return await csvAgent.getStats(params as never);
+            default:
+              throw new Error(`Unknown CSV action: ${action}`);
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 1: JSON agent
+    if (agentType === 'json') {
+      const jsonAgent = new JsonAgent();
+
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          switch (action) {
+            case 'parseJson':
+              return await jsonAgent.parseJson(params as never);
+            case 'queryJson':
+              return await jsonAgent.queryJson(params as never);
+            case 'validateJson':
+              return await jsonAgent.validateJson(params as never);
+            case 'transformJson':
+              return await jsonAgent.transformJson(params as never);
+            case 'stringifyJson':
+              return await jsonAgent.stringifyJson(params as never);
+            case 'mergeJson':
+              return await jsonAgent.mergeJson(params as never);
+            default:
+              throw new Error(`Unknown JSON action: ${action}`);
           }
         }
       };
