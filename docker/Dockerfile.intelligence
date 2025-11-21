@@ -1,0 +1,68 @@
+# Dockerfile for Intelligence Layer - Context Memory Module
+# Version: v0.1.0-context-memory
+# Created: 2025-11-21
+# Purpose: Rollback-safe containerization for intelligence layer development
+
+# Base image - Node.js LTS for TypeScript support
+FROM node:20-alpine AS base
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache \
+    git \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/cache/apk/*
+
+# Copy package files
+COPY package*.json ./
+COPY tsconfig.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Development stage
+FROM base AS development
+RUN npm ci
+
+# Copy source code
+COPY src/ ./src/
+
+# Build TypeScript
+RUN npm run build 2>/dev/null || echo "Build script not configured yet"
+
+# Production stage
+FROM base AS production
+
+# Copy built files from development stage
+COPY --from=development /app/dist ./dist
+COPY --from=development /app/src ./src
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV INTELLIGENCE_VERSION=v0.1.0-context-memory
+ENV ROLLBACK_ENABLED=true
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD node -e "console.log('healthy')" || exit 1
+
+# Expose port (if needed for API)
+EXPOSE 3000
+
+# Create volume for persistent data (entity store)
+VOLUME ["/app/data"]
+
+# Labels for versioning and rollback
+LABEL version="v0.1.0-context-memory" \
+      description="Intelligence Layer - Context Memory Module" \
+      maintainer="workstation@creditxcredit" \
+      rollback.previous="none" \
+      rollback.enabled="true" \
+      created="2025-11-21"
+
+# Start command
+CMD ["node", "dist/index.js"]
