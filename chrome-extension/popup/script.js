@@ -650,3 +650,233 @@ function formatTimestamp(timestamp) {
   // Format as date
   return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
 }
+
+/**
+ * Real-Time Updates from Background Script
+ */
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'background:event') {
+    handleBackgroundEvent(request.event, request.data);
+  }
+  sendResponse({ received: true });
+});
+
+function handleBackgroundEvent(event, data) {
+  console.log('📨 Background event:', event, data);
+  
+  switch (event) {
+    case 'execution:started':
+      showStatus(`⚙️ Execution started: ${data.executionId}`, 'info');
+      if (currentExecutionId === data.executionId) {
+        startPolling(data.executionId);
+      }
+      break;
+      
+    case 'execution:progress':
+      showStatus(`⚙️ Progress: ${data.progress}%`, 'info');
+      break;
+      
+    case 'execution:completed':
+      showStatus(`✅ Execution completed: ${data.executionId}`, 'success');
+      if (currentExecutionId === data.executionId) {
+        stopPolling();
+        displayResult(data.result || {});
+      }
+      loadHistory(); // Refresh history
+      break;
+      
+    case 'execution:failed':
+      showStatus(`❌ Execution failed: ${data.error}`, 'error');
+      if (currentExecutionId === data.executionId) {
+        stopPolling();
+      }
+      break;
+      
+    case 'agent:status':
+      console.log(`🤖 Agent ${data.agentId} status: ${data.status}`);
+      break;
+  }
+}
+
+/**
+ * Backend Agent Shortcuts
+ * Add buttons to trigger specific agents
+ */
+function setupAgentShortcuts() {
+  // This can be called when Builder tab is active
+  const agentButtons = [
+    { id: 'mainpage', name: 'Navigate Page', icon: '🏠' },
+    { id: 'codepage', name: 'Edit Code', icon: '💻' },
+    { id: 'repo-agent', name: 'Manage Repo', icon: '📦' },
+    { id: 'curriculum', name: 'Learn', icon: '📚' },
+    { id: 'designer', name: 'Design UI', icon: '🎨' }
+  ];
+  
+  return agentButtons;
+}
+
+/**
+ * Trigger a specific backend agent
+ */
+async function triggerAgent(agentType, params) {
+  try {
+    showStatus(`🚀 Triggering ${agentType} agent...`, 'info');
+    
+    const response = await chrome.runtime.sendMessage({
+      action: 'triggerAgent',
+      agentType,
+      params
+    });
+    
+    if (response.success) {
+      showStatus(`✅ ${agentType} agent triggered successfully`, 'success');
+      
+      // Subscribe to updates if we have a task ID
+      if (response.data && response.data.taskId) {
+        subscribeToTaskUpdates(response.data.taskId);
+      }
+      
+      return response;
+    } else {
+      throw new Error(response.error || 'Failed to trigger agent');
+    }
+  } catch (error) {
+    showStatus(`❌ Failed to trigger agent: ${error.message}`, 'error');
+    throw error;
+  }
+}
+
+/**
+ * Get system overview (all agents status)
+ */
+async function getSystemOverview() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'getSystemOverview'
+    });
+    
+    if (response.success) {
+      return response.data;
+    } else {
+      throw new Error(response.error || 'Failed to get system overview');
+    }
+  } catch (error) {
+    console.error('Failed to get system overview:', error);
+    return null;
+  }
+}
+
+/**
+ * Subscribe to execution/task updates via WebSocket
+ */
+function subscribeToTaskUpdates(taskId) {
+  chrome.runtime.sendMessage({
+    action: 'subscribeExecution',
+    executionId: taskId
+  });
+}
+
+/**
+ * Enhanced workflow execution with backend integration
+ */
+async function executeWorkflowEnhanced(workflowId, variables = {}) {
+  try {
+    showStatus('🚀 Executing workflow...', 'info');
+    executeBtn.disabled = true;
+    
+    const response = await chrome.runtime.sendMessage({
+      action: 'executeWorkflow',
+      workflowId,
+      variables,
+      useLocal: false // Use backend execution
+    });
+    
+    if (response.success) {
+      currentExecutionId = response.data?.executionId || response.executionId;
+      
+      showStatus(`⚙️ Execution started: ${currentExecutionId}`, 'info');
+      
+      // Subscribe to real-time updates
+      subscribeToTaskUpdates(currentExecutionId);
+      
+      // Start polling for status
+      startPolling(currentExecutionId);
+      
+      return response;
+    } else {
+      throw new Error(response.error || 'Execution failed');
+    }
+  } catch (error) {
+    showStatus(`❌ Execution error: ${error.message}`, 'error');
+    throw error;
+  } finally {
+    executeBtn.disabled = false;
+  }
+}
+
+/**
+ * Load workflows from backend
+ */
+async function loadBackendWorkflows() {
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'getWorkflows',
+      params: {
+        limit: 50,
+        sortBy: 'updated_at',
+        order: 'DESC'
+      }
+    });
+    
+    if (response.success) {
+      return response.data?.workflows || [];
+    } else {
+      console.error('Failed to load workflows:', response.error);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error loading workflows:', error);
+    return [];
+  }
+}
+
+/**
+ * Display agent status in Builder tab
+ */
+async function displayAgentStatus() {
+  const overview = await getSystemOverview();
+  
+  if (overview && builderStatus) {
+    builderStatus.textContent = `
+      Agents: ${overview.runningAgents}/${overview.totalAgents} running
+      | Pending Tasks: ${overview.pendingTasks}
+    `;
+    builderStatus.classList.add('visible', 'info');
+  }
+}
+
+// Auto-refresh agent status when Builder tab is active
+let agentStatusInterval = null;
+function startAgentStatusMonitoring() {
+  if (agentStatusInterval) clearInterval(agentStatusInterval);
+  
+  agentStatusInterval = setInterval(() => {
+    const builderTab = document.querySelector('[data-tab="builder"]');
+    if (builderTab && builderTab.classList.contains('active')) {
+      displayAgentStatus();
+    }
+  }, 5000);
+}
+
+// Call when popup opens
+setTimeout(() => {
+  displayAgentStatus();
+  startAgentStatusMonitoring();
+}, 1000);
+
+// Cleanup interval when popup is closed to prevent memory leaks
+window.addEventListener('unload', () => {
+  if (agentStatusInterval) {
+    clearInterval(agentStatusInterval);
+  }
+});

@@ -1,26 +1,47 @@
 /**
  * Workstation Chrome Extension - Background Service Worker
  * Handles JWT authentication and API communication with Workstation backend
- * Enhanced with Playwright execution capabilities
+ * Enhanced with Playwright execution capabilities and full backend integration
  */
+
+// Import API Bridge
+import { getAPIBridge } from './api-bridge.js';
 
 // Import Playwright execution engine
 import { PlaywrightExecution } from './playwright/execution.js';
 import { PlaywrightRetryManager } from './playwright/retry.js';
+import { PlaywrightNetworkMonitor } from './playwright/network.js';
+import { SelfHealingSelectors } from './playwright/self-healing.js';
+import { AgenticContextLearner } from './playwright/context-learning.js';
+import { AgenticNetworkMonitor } from './playwright/agentic-network.js';
 
 let workstationToken = '';
 let backendUrl = 'http://localhost:3000';
 let settings = {
   backendUrl: 'http://localhost:3000',
   pollInterval: 2000,
-  autoRetry: true
+  autoRetry: true,
+  enableWebSocket: true
 };
+
+// Initialize API Bridge
+let apiBridge = null;
 
 // Initialize Playwright execution engine
 const playwrightExecution = new PlaywrightExecution();
 const retryManager = new PlaywrightRetryManager();
 
-console.log('🚀 Workstation extension with Playwright capabilities initialized');
+// Initialize agentic components
+const agenticContextLearner = new AgenticContextLearner();
+
+// Initialize context learner
+agenticContextLearner.initialize().then(() => {
+  console.log('🧠 Agentic context learner initialized in background');
+}).catch((error) => {
+  console.error('❌ Failed to initialize context learner:', error);
+});
+
+console.log('🚀 Workstation extension with full backend integration initialized');
 
 // Initialize on extension install
 chrome.runtime.onInstalled.addListener(async () => {
@@ -33,34 +54,172 @@ chrome.runtime.onInstalled.addListener(async () => {
       backendUrl = settings.backendUrl;
     }
     
+    // Initialize API Bridge
     const response = await fetch(`${backendUrl}/auth/demo-token`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     const data = await response.json();
     workstationToken = data.token;
     await chrome.storage.local.set({ workstationToken });
-    console.log('✅ Workstation token stored successfully');
+    
+    // Setup API Bridge with token
+    apiBridge = getAPIBridge(backendUrl, workstationToken);
+    
+    // Connect WebSocket if enabled
+    if (settings.enableWebSocket) {
+      apiBridge.connectWebSocket();
+      setupWebSocketListeners();
+    }
+    
+    console.log('✅ Workstation token stored and API bridge initialized');
   } catch (error) {
-    console.error('❌ Failed to get token:', error);
+    console.error('❌ Failed to initialize:', error);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Extension Initialization Failed',
+      message: 'Could not connect to backend. Please check settings.'
+    });
   }
 });
 
+/**
+ * Setup WebSocket event listeners
+ */
+function setupWebSocketListeners() {
+  if (!apiBridge) return;
+
+  apiBridge.on('execution:started', (data) => {
+    console.log('🚀 Execution started:', data.executionId);
+    notifyPopup('execution:started', data);
+  });
+
+  apiBridge.on('execution:progress', (data) => {
+    console.log('⚙️ Execution progress:', data.executionId, data.progress);
+    notifyPopup('execution:progress', data);
+  });
+
+  apiBridge.on('execution:completed', (data) => {
+    console.log('✅ Execution completed:', data.executionId);
+    notifyPopup('execution:completed', data);
+  });
+
+  apiBridge.on('execution:failed', (data) => {
+    console.error('❌ Execution failed:', data.executionId, data.error);
+    notifyPopup('execution:failed', data);
+  });
+
+  apiBridge.on('agent:status', (data) => {
+    console.log('🤖 Agent status update:', data.agentId, data.status);
+    notifyPopup('agent:status', data);
+  });
+}
+
+/**
+ * Notify popup of events
+ */
+function notifyPopup(event, data) {
+  chrome.runtime.sendMessage({
+    type: 'background:event',
+    event,
+    data
+  }).catch((error) => {
+    // Only ignore if popup is not open
+    if (!error || error.message !== 'Could not establish connection. Receiving end does not exist.') {
+      console.error('Failed to notify popup:', error);
+    }
+  });
+}
+
+
 // Message handler for popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // Ensure API bridge is initialized
+  if (!apiBridge && request.action !== 'updateSettings') {
+    sendResponse({ success: false, error: 'API bridge not initialized' });
+    return true;
+  }
+
+  // ========== Workflow Execution ==========
   if (request.action === 'executeWorkflow') {
-    // Use Playwright execution engine for local execution
-    if (request.useLocal) {
-      const tabId = sender.tab?.id || request.tabId;
-      if (tabId) {
-        playwrightExecution.executeWorkflow(request.workflow, tabId, sendResponse);
-      } else {
-        sendResponse({ success: false, error: 'No tab ID provided' });
-      }
-    } else {
-      // Use backend API for server-side execution
-      executeWorkflow(request.workflow).then(sendResponse);
-    }
-    return true; // Required for async response
+    executeWorkflowHandler(request, sender, sendResponse);
+    return true;
   }
   
+  // ========== Backend Agent Integration ==========
+  if (request.action === 'triggerAgent') {
+    triggerAgentHandler(request, sendResponse);
+    return true;
+  }
+
+  if (request.action === 'getAgentStatus') {
+    getAgentStatusHandler(request, sendResponse);
+    return true;
+  }
+
+  if (request.action === 'getAllAgents') {
+    apiBridge.getAllAgents().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  if (request.action === 'getSystemOverview') {
+    apiBridge.getSystemOverview().then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  // ========== Workflow Management ==========
+  if (request.action === 'getWorkflows') {
+    apiBridge.getWorkflows(request.params || {}).then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  if (request.action === 'createWorkflow') {
+    apiBridge.createWorkflow(request.workflow).then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  if (request.action === 'deleteWorkflow') {
+    apiBridge.deleteWorkflow(request.workflowId).then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  // ========== Execution Management ==========
+  if (request.action === 'getExecutionStatus') {
+    getExecutionStatusHandler(request, sendResponse);
+    return true;
+  }
+
+  if (request.action === 'getExecutionLogs') {
+    apiBridge.getExecutionLogs(request.executionId, request.params || {}).then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+
+  if (request.action === 'cancelExecution') {
+    cancelExecutionHandler(request, sendResponse);
+    return true;
+  }
+
+  if (request.action === 'retryExecution') {
+    apiBridge.retryExecution(request.executionId).then(sendResponse).catch(error => {
+      sendResponse({ success: false, error: error.message });
+    });
+    return true;
+  }
+  
+  // ========== Recording ==========
   if (request.action === 'recordAction') {
     recordAction(request.actionData).then(sendResponse);
     return true;
@@ -76,91 +235,141 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  if (request.action === 'getExecutionStatus') {
-    getExecutionStatus(request.executionId).then(sendResponse);
-    return true;
-  }
-  
-  if (request.action === 'cancelExecution') {
-    const cancelled = playwrightExecution.cancelExecution(request.executionId);
-    sendResponse({ success: cancelled });
-    return true;
-  }
-  
+  // ========== Settings ==========
   if (request.action === 'updateSettings') {
     updateSettings(request.settings).then(sendResponse);
+    return true;
+  }
+
+  // ========== WebSocket Management ==========
+  if (request.action === 'subscribeExecution') {
+    if (apiBridge) {
+      apiBridge.subscribeToExecution(request.executionId);
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'API bridge not initialized' });
+    }
+    return true;
+  }
+
+  if (request.action === 'unsubscribeExecution') {
+    if (apiBridge) {
+      apiBridge.unsubscribeFromExecution(request.executionId);
+      sendResponse({ success: true });
+    } else {
+      sendResponse({ success: false, error: 'API bridge not initialized' });
+    }
     return true;
   }
 });
 
 /**
- * Execute a workflow by sending it to the Workstation backend
- * @param {Object} workflow - Workflow configuration
- * @returns {Promise<Object>} Execution result
+ * Handle workflow execution (local or remote)
  */
-async function executeWorkflow(workflow) {
-  const { workstationToken } = await chrome.storage.local.get('workstationToken');
-  
+async function executeWorkflowHandler(request, sender, sendResponse) {
   try {
-    const response = await fetch(`${backendUrl}/api/v2/execute`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${workstationToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(workflow)
-    });
+    // Use Playwright execution engine for local execution
+    if (request.useLocal) {
+      const tabId = sender.tab?.id || request.tabId;
+      if (tabId) {
+        await playwrightExecution.executeWorkflow(request.workflow, tabId, sendResponse);
+      } else {
+        sendResponse({ success: false, error: 'No tab ID provided' });
+      }
+    } else {
+      // Use backend API for server-side execution
+      const result = await apiBridge.executeWorkflow(request.workflow.id || request.workflowId, request.variables);
+      sendResponse({ success: true, ...result, isLocal: false });
+    }
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Handle agent triggering
+ */
+async function triggerAgentHandler(request, sendResponse) {
+  try {
+    const { agentType, params } = request;
     
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
+    let result;
+    switch (agentType) {
+      case 'mainpage':
+        result = await apiBridge.triggerMainpageAgent(params);
+        break;
+      case 'codepage':
+        result = await apiBridge.triggerCodepageAgent(params);
+        break;
+      case 'repo-agent':
+        result = await apiBridge.triggerRepoAgent(params);
+        break;
+      case 'curriculum':
+        result = await apiBridge.triggerCurriculumAgent(params);
+        break;
+      case 'designer':
+        result = await apiBridge.triggerDesignerAgent(params);
+        break;
+      default:
+        // Generic agent task creation
+        result = await apiBridge.createAgentTask(agentType, params.type, params.payload, params.priority);
     }
     
-    return { success: true, data };
+    sendResponse({ success: true, ...result });
   } catch (error) {
-    console.error('❌ Workflow execution failed:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to execute workflow'
-    };
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Handle agent status retrieval
+ */
+async function getAgentStatusHandler(request, sendResponse) {
+  try {
+    const result = await apiBridge.getAgent(request.agentId);
+    sendResponse({ success: true, ...result });
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
   }
 }
 
 /**
  * Get execution status from backend or local execution
- * @param {string} executionId - Execution ID
- * @returns {Promise<Object>} Status object
  */
-async function getExecutionStatus(executionId) {
-  // First check local Playwright execution
-  const localStatus = playwrightExecution.getExecutionStatus(executionId);
-  if (localStatus) {
-    return { success: true, ...localStatus };
-  }
-  
-  // Otherwise query backend
-  const { workstationToken } = await chrome.storage.local.get('workstationToken');
-  
+async function getExecutionStatusHandler(request, sendResponse) {
   try {
-    const response = await fetch(`${backendUrl}/api/v2/executions/${executionId}`, {
-      headers: {
-        'Authorization': `Bearer ${workstationToken}`,
-      }
-    });
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    // First check local Playwright execution
+    const localStatus = playwrightExecution.getExecutionStatus(request.executionId);
+    if (localStatus) {
+      sendResponse({ success: true, ...localStatus, isLocal: true });
+      return;
     }
     
-    const data = await response.json();
-    return { success: true, ...data };
+    // Otherwise query backend
+    const result = await apiBridge.getExecution(request.executionId);
+    sendResponse({ success: true, ...result, isLocal: false });
   } catch (error) {
-    console.error('❌ Failed to get execution status:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Failed to get status'
-    };
+    sendResponse({ success: false, error: error.message });
+  }
+}
+
+/**
+ * Cancel execution (local or remote)
+ */
+async function cancelExecutionHandler(request, sendResponse) {
+  try {
+    // Try local cancellation first
+    const cancelled = playwrightExecution.cancelExecution(request.executionId);
+    
+    if (cancelled) {
+      sendResponse({ success: true, isLocal: true });
+    } else {
+      // Try backend cancellation
+      const result = await apiBridge.cancelExecution(request.executionId);
+      sendResponse({ success: true, ...result, isLocal: false });
+    }
+  } catch (error) {
+    sendResponse({ success: false, error: error.message });
   }
 }
 
@@ -173,6 +382,20 @@ async function updateSettings(newSettings) {
   settings = { ...settings, ...newSettings };
   backendUrl = settings.backendUrl;
   await chrome.storage.local.set({ settings });
+  
+  // Reinitialize API bridge with new settings
+  if (apiBridge) {
+    apiBridge.setBaseUrl(backendUrl);
+    
+    // Reconnect WebSocket if enabled
+    if (settings.enableWebSocket) {
+      apiBridge.connectWebSocket();
+      setupWebSocketListeners();
+    } else {
+      apiBridge.disconnectWebSocket();
+    }
+  }
+  
   return { success: true };
 }
 
