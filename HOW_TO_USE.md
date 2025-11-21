@@ -4,7 +4,36 @@
 
 ---
 
-## 📋 Table of Contents
+## 🚀 ONE-CLICK DEPLOYMENT (RECOMMENDED)
+
+### The Fastest Way to Get Started
+
+```bash
+# Clone the repository (if you haven't already)
+git clone https://github.com/creditXcredit/workstation.git
+cd workstation
+
+# Run the one-click deployment script
+./one-click-deploy.sh
+```
+
+**That's it!** The script will:
+- ✅ Install all dependencies automatically
+- ✅ Build TypeScript code
+- ✅ Build and load Chrome extension
+- ✅ Start the backend server
+- ✅ Open Chrome with workflow builder
+- ✅ Auto-connect everything
+
+**Time to fully operational**: ~2-3 minutes
+
+**Manual steps required**: 0 (after running the script)
+
+See [ONE_CLICK_DEPLOYMENT.md](ONE_CLICK_DEPLOYMENT.md) for detailed information.
+
+---
+
+## 📋 Table of Contents (Manual Setup)
 
 1. [Start the Server](#1-start-the-server)
 2. [Access the Visual Workflow Builder](#2-access-the-visual-workflow-builder)
