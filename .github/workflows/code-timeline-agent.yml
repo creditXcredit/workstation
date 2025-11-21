@@ -78,67 +78,67 @@ jobs:
           NEXT_UPDATE="${TOMORROW} 07:00 UTC"
           
           # Update the timeline (this is a simplified version - full implementation would be more complex)
-          cat > CODE_TIMELINE_TEMP.md << 'EOFTIMELINE'
-# 📊 Repository Code Timeline & Growth Tracker
+          cat > CODE_TIMELINE_TEMP.md <<- 'EOFTIMELINE'
+          # 📊 Repository Code Timeline & Growth Tracker
 
-**Last Updated**: CURRENT_DATE_PLACEHOLDER  
-**Next Update**: NEXT_UPDATE_PLACEHOLDER  
-**Tracking Agent**: Code Timeline Agent v1.0.0
+          **Last Updated**: CURRENT_DATE_PLACEHOLDER  
+          **Next Update**: NEXT_UPDATE_PLACEHOLDER  
+          **Tracking Agent**: Code Timeline Agent v1.0.0
 
----
+          ---
 
-## 📈 Code Growth Timeline
+          ## 📈 Code Growth Timeline
 
-### Current Statistics
+          ### Current Statistics
 
-**Total Lines of Code**: ${{ steps.stats.outputs.total_loc }}
+          **Total Lines of Code**: ${{ steps.stats.outputs.total_loc }}
 
-- Production Code (src/): ${{ steps.stats.outputs.prod_loc }} LOC
-- Chrome Extension: ${{ steps.stats.outputs.chrome_loc }} LOC
-- Test Code (tests/): ${{ steps.stats.outputs.test_loc }} LOC
+          - Production Code (src/): ${{ steps.stats.outputs.prod_loc }} LOC
+          - Chrome Extension: ${{ steps.stats.outputs.chrome_loc }} LOC
+          - Test Code (tests/): ${{ steps.stats.outputs.test_loc }} LOC
 
-**Repository Metrics**:
-- Total Files: ${{ steps.stats.outputs.total_files }}
-- TypeScript Files: ${{ steps.stats.outputs.ts_files }}
-- Test Files: ${{ steps.stats.outputs.test_files }}
-- GitHub Workflows: ${{ steps.stats.outputs.workflows }}
-- Agents: ${{ steps.stats.outputs.agents }}
+          **Repository Metrics**:
+          - Total Files: ${{ steps.stats.outputs.total_files }}
+          - TypeScript Files: ${{ steps.stats.outputs.ts_files }}
+          - Test Files: ${{ steps.stats.outputs.test_files }}
+          - GitHub Workflows: ${{ steps.stats.outputs.workflows }}
+          - Agents: ${{ steps.stats.outputs.agents }}
 
-**Repository Age**: ${{ steps.age.outputs.age_days }} days  
-**Average Daily Growth**: ${{ steps.age.outputs.avg_daily }} LOC/day
+          **Repository Age**: ${{ steps.age.outputs.age_days }} days  
+          **Average Daily Growth**: ${{ steps.age.outputs.avg_daily }} LOC/day
 
----
+          ---
 
-## 📊 Current Code Composition
+          ## 📊 Current Code Composition
 
-\`\`\`
-┌─────────────────────────────────────────────────────────────┐
-│  CODE DISTRIBUTION (as of CURRENT_DATE_PLACEHOLDER)         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  Production Code (src/)          ████████████░░  ${{ steps.stats.outputs.prod_loc }} LOC │
-│  Chrome Extension                ██████░░░░░░░░  ${{ steps.stats.outputs.chrome_loc }} LOC │
-│  Test Code (tests/)              ████░░░░░░░░░░  ${{ steps.stats.outputs.test_loc }} LOC │
-│                                                             │
-│  Total Application Code:                        ${{ steps.stats.outputs.total_loc }} LOC │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-\`\`\`
+          \`\`\`
+          ┌─────────────────────────────────────────────────────────────┐
+          │  CODE DISTRIBUTION (as of CURRENT_DATE_PLACEHOLDER)         │
+          ├─────────────────────────────────────────────────────────────┤
+          │                                                             │
+          │  Production Code (src/)          ████████████░░  ${{ steps.stats.outputs.prod_loc }} LOC │
+          │  Chrome Extension                ██████░░░░░░░░  ${{ steps.stats.outputs.chrome_loc }} LOC │
+          │  Test Code (tests/)              ████░░░░░░░░░░  ${{ steps.stats.outputs.test_loc }} LOC │
+          │                                                             │
+          │  Total Application Code:                        ${{ steps.stats.outputs.total_loc }} LOC │
+          │                                                             │
+          └─────────────────────────────────────────────────────────────┘
+          \`\`\`
 
----
+          ---
 
-## 🔄 Update Schedule
+          ## 🔄 Update Schedule
 
-**Agent**: Code Timeline Agent  
-**Frequency**: Daily at 7:00 AM UTC  
-**Next Update**: $NEXT_UPDATE
+          **Agent**: Code Timeline Agent  
+          **Frequency**: Daily at 7:00 AM UTC  
+          **Next Update**: $NEXT_UPDATE
 
----
+          ---
 
-**Managed by**: Code Timeline Agent v1.0.0  
-**Last Updated**: CURRENT_DATE_PLACEHOLDER  
-**Next Update**: NEXT_UPDATE_PLACEHOLDER
-EOFTIMELINE
+          **Managed by**: Code Timeline Agent v1.0.0  
+          **Last Updated**: CURRENT_DATE_PLACEHOLDER  
+          **Next Update**: NEXT_UPDATE_PLACEHOLDER
+          EOFTIMELINE
           
           # Replace placeholders with actual values
           sed -i "s/CURRENT_DATE_PLACEHOLDER/$CURRENT_DATE/g" CODE_TIMELINE_TEMP.md
