@@ -8,10 +8,7 @@ const AUTO_CONNECT = {
   DEFAULT_BACKEND: 'http://localhost:3000',
   
   // Connection check interval (ms)
-  CHECK_INTERVAL: 5000,
-  
-  // Maximum retry attempts
-  MAX_RETRIES: 3,
+  CHECK_INTERVAL: 10000,
   
   // Current status
   status: {

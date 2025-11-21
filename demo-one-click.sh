@@ -57,6 +57,8 @@ echo "   │   ├─► playwright@1.56.1"
 echo "   │   ├─► typescript@5.3.2"
 echo "   │   ├─► jsonwebtoken@9.0.2"
 echo "   │   └─► ... and 87 more packages"
+echo "   │"
+echo "   │   (Note: Package versions shown are examples and may differ from actual versions)"
 echo "   └─► Completed in ~30 seconds"
 echo ""
 sleep 2

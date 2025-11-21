@@ -115,13 +115,13 @@ if [ ! -f .env ]; then
         # Generate secure JWT secret
         JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
         
-        # Update .env with generated secret
+        # Update .env with generated secret (using | delimiter for robustness)
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS
-            sed -i '' "s/your-secure-32-character-minimum-secret-key/$JWT_SECRET/" .env
+            sed -i '' "s|your-secure-32-character-minimum-secret-key|$JWT_SECRET|" .env
         else
             # Linux
-            sed -i "s/your-secure-32-character-minimum-secret-key/$JWT_SECRET/" .env
+            sed -i "s|your-secure-32-character-minimum-secret-key|$JWT_SECRET|" .env
         fi
         
         success "Created .env with generated JWT_SECRET"
@@ -133,8 +133,8 @@ else
     success ".env file exists"
 fi
 
-# Source .env
-source .env
+# Load environment variables from .env safely
+export $(grep -v '^#' .env | xargs)
 success "Environment configured"
 
 echo ""
@@ -186,9 +186,20 @@ log "Step 5/7: Starting backend server..."
 
 # Kill any existing server on port 3000
 if lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
-    warning "Port 3000 is in use, attempting to free it..."
-    lsof -ti:3000 | xargs kill -9 2>/dev/null || true
-    sleep 2
+    warning "Port 3000 is in use, attempting graceful shutdown..."
+    PIDS=$(lsof -ti:3000)
+    if [ -n "$PIDS" ]; then
+        info "Sending SIGTERM to processes on port 3000: $PIDS"
+        echo "$PIDS" | xargs kill 2>/dev/null || true
+        sleep 3
+        # Check if any processes are still running
+        REMAINING_PIDS=$(lsof -ti:3000 2>/dev/null)
+        if [ -n "$REMAINING_PIDS" ]; then
+            warning "Processes still running on port 3000, sending SIGKILL: $REMAINING_PIDS"
+            echo "$REMAINING_PIDS" | xargs kill -9 2>/dev/null || true
+            sleep 2
+        fi
+    fi
 fi
 
 # Start server in background

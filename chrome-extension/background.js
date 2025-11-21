@@ -99,25 +99,65 @@ chrome.runtime.onStartup.addListener(async () => {
   await autoConnectToBackend();
 });
 
-// Monitor connection periodically
-setInterval(async () => {
-  try {
-    const response = await fetch(`${backendUrl}/health`, {
-      signal: AbortSignal.timeout(2000)
-    });
+// Monitor connection periodically - only start after initial setup
+let connectionMonitoringStarted = false;
+
+async function startConnectionMonitoring() {
+  if (connectionMonitoringStarted) return;
+  connectionMonitoringStarted = true;
+  
+  setInterval(async () => {
+    // Only monitor if we have a backend URL
+    if (!backendUrl) return;
     
-    if (response.ok) {
-      chrome.action.setBadgeText({ text: '✓' });
-      chrome.action.setBadgeBackgroundColor({ color: '#00AA00' });
-    } else {
+    try {
+      const response = await fetch(`${backendUrl}/health`, {
+        signal: AbortSignal.timeout(2000)
+      });
+      
+      if (response.ok) {
+        chrome.action.setBadgeText({ text: '✓' });
+        chrome.action.setBadgeBackgroundColor({ color: '#00AA00' });
+      } else {
+        chrome.action.setBadgeText({ text: '✗' });
+        chrome.action.setBadgeBackgroundColor({ color: '#AA0000' });
+      }
+    } catch (error) {
       chrome.action.setBadgeText({ text: '✗' });
       chrome.action.setBadgeBackgroundColor({ color: '#AA0000' });
     }
+  }, 10000); // Check every 10 seconds
+}
+
+// Start monitoring after successful initialization
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    console.log('🚀 Workstation extension installed, auto-connecting...');
+    
+    // Load settings
+    const stored = await chrome.storage.local.get(['settings']);
+    if (stored.settings) {
+      settings = { ...settings, ...stored.settings };
+      backendUrl = settings.backendUrl;
+    }
+    
+    // Try auto-connect
+    await autoConnectToBackend();
+    
+    // Start connection monitoring
+    startConnectionMonitoring();
   } catch (error) {
-    chrome.action.setBadgeText({ text: '✗' });
-    chrome.action.setBadgeBackgroundColor({ color: '#AA0000' });
+    console.error('❌ Failed to auto-connect:', error);
   }
-}, 10000); // Check every 10 seconds
+});
+
+chrome.runtime.onStartup.addListener(async () => {
+  console.log('🔄 Extension started, attempting auto-connect...');
+  await autoConnectToBackend();
+  
+  // Start connection monitoring
+  startConnectionMonitoring();
+});
 
 // Message handler for popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
