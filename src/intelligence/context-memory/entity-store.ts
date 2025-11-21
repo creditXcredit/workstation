@@ -234,8 +234,12 @@ export class EntityStore {
       }
 
       if (options.workflow_id) {
-        conditions.push('json_extract(context, "$.workflow_ids") LIKE ?');
-        params.push(`%"${options.workflow_id}"%`);
+        // Use JSON function to properly query array elements
+        conditions.push(`EXISTS (
+          SELECT 1 FROM json_each(context, '$.workflow_ids')
+          WHERE value = ?
+        )`);
+        params.push(options.workflow_id);
       }
 
       let query = 'SELECT * FROM entities';
@@ -244,20 +248,23 @@ export class EntityStore {
       }
 
       // Add sorting
-      // Whitelist allowed columns and sort directions to prevent SQL injection
-      const allowedSortBy = ['importance', 'access_count', 'last_seen'];
+      // Map sort columns to actual database expressions
+      const sortByMap: Record<string, string> = {
+        importance: "json_extract(context, '$.importance_score')",
+        access_count: "access_count",
+        last_seen: "last_seen"
+      };
       const defaultSortBy = 'last_seen';
       const sortByInput = options.sort_by;
-      const sortBy = allowedSortBy.includes(sortByInput as string)
-        ? sortByInput
-        : defaultSortBy;
+      const sortByKey = sortByInput && Object.prototype.hasOwnProperty.call(sortByMap, sortByInput) ? sortByInput : defaultSortBy;
+      const sortByExpr = sortByMap[sortByKey];
       const allowedSortOrder = ['asc', 'desc'];
       const defaultSortOrder = 'desc';
       const sortOrderInput = (options.sort_order || '').toLowerCase();
       const sortOrder = allowedSortOrder.includes(sortOrderInput)
         ? sortOrderInput
         : defaultSortOrder;
-      query += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
+      query += ` ORDER BY ${sortByExpr} ${sortOrder.toUpperCase()}`;
 
       // Add pagination
       if (options.limit) {

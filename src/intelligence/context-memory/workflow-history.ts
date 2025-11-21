@@ -381,24 +381,27 @@ export class WorkflowHistory {
       const avgDuration = avgData.avg_duration;
       const threshold = avgDuration * 1.5; // 50% slower than average
 
-      if (record.duration_ms! > threshold) {
-        const patternId = `bottleneck_${record.workflow_id}`;
-        const confidence = Math.min((record.duration_ms! - avgDuration) / avgDuration, 1.0);
-
-        const pattern: WorkflowPattern = {
-          id: patternId,
-          pattern_type: 'performance_bottleneck',
-          description: `Workflow execution took ${record.duration_ms}ms, ${Math.round((record.duration_ms! / avgDuration - 1) * 100)}% slower than average`,
-          confidence,
-          occurrences: 1,
-          first_detected: record.started_at,
-          last_detected: record.started_at,
-          workflow_ids: [record.workflow_id],
-          recommendation: 'Review task dependencies and consider parallel execution'
-        };
-
-        await this.savePattern(pattern);
+      // Safely check duration_ms before using it
+      if (record.duration_ms == null || record.duration_ms <= threshold) {
+        return;
       }
+      const durationMs = record.duration_ms;
+      const patternId = `bottleneck_${record.workflow_id}`;
+      const confidence = Math.min((durationMs - avgDuration) / avgDuration, 1.0);
+
+      const pattern: WorkflowPattern = {
+        id: patternId,
+        pattern_type: 'performance_bottleneck',
+        description: `Workflow execution took ${durationMs}ms, ${Math.round((durationMs / avgDuration - 1) * 100)}% slower than average`,
+        confidence,
+        occurrences: 1,
+        first_detected: record.started_at,
+        last_detected: record.started_at,
+        workflow_ids: [record.workflow_id],
+        recommendation: 'Review task dependencies and consider parallel execution'
+      };
+
+      await this.savePattern(pattern);
     } catch (error) {
       logger.error('Failed to detect performance pattern', { error, record });
     }
@@ -512,10 +515,13 @@ export class WorkflowHistory {
     try {
       const db = getDatabase();
       const rows = await db.all(
-        `SELECT * FROM workflow_patterns 
-         WHERE json_extract(workflow_ids, '$') LIKE ?
+        `SELECT * FROM workflow_patterns
+         WHERE EXISTS (
+           SELECT 1 FROM json_each(workflow_ids)
+           WHERE value = ?
+         )
          ORDER BY confidence DESC, last_detected DESC`,
-        `%"${workflowId}"%`
+        workflowId
       );
 
       return rows.map(row => this.deserializePattern(row));

@@ -15,30 +15,23 @@ import {
 const router = Router();
 
 /**
- * Get entity by ID
- * GET /api/v2/context/entities/:id
+ * Get entity statistics
+ * GET /api/v2/context/entities/stats
  */
-router.get('/entities/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/entities/stats', authenticateToken, async (req: Request, res: Response) => {
   try {
     const entityStore = getEntityStore();
-    const entity = await entityStore.getEntity(req.params.id);
-
-    if (!entity) {
-      return res.status(404).json({
-        success: false,
-        error: 'Entity not found'
-      });
-    }
+    const stats = await entityStore.getStatistics();
 
     res.json({
       success: true,
-      data: entity
+      data: stats
     });
   } catch (error) {
-    logger.error('Failed to get entity', { error, entityId: req.params.id });
+    logger.error('Failed to get entity statistics', { error });
     res.status(500).json({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get entity'
+      error: error instanceof Error ? error.message : 'Failed to get entity statistics'
     });
   }
 });
@@ -60,13 +53,23 @@ router.get('/entities', authenticateToken, async (req: Request, res: Response) =
       }
     }
     
+    // Validate numeric query parameters
+    const minImportanceParam = req.query.min_importance ? Number(req.query.min_importance) : undefined;
+    const min_importance = (typeof minImportanceParam === 'number' && !isNaN(minImportanceParam)) ? minImportanceParam : undefined;
+
+    const limitParam = req.query.limit ? Number(req.query.limit) : 100;
+    const limit = (!isNaN(limitParam) && limitParam > 0) ? limitParam : 100;
+
+    const offsetParam = req.query.offset ? Number(req.query.offset) : 0;
+    const offset = (!isNaN(offsetParam) && offsetParam >= 0) ? offsetParam : 0;
+    
     const options = {
       type: entityType,
       tags: req.query.tags ? (req.query.tags as string).split(',') : undefined,
       workflow_id: req.query.workflow_id as string | undefined,
-      min_importance: req.query.min_importance ? Number(req.query.min_importance) : undefined,
-      limit: req.query.limit ? Number(req.query.limit) : 100,
-      offset: req.query.offset ? Number(req.query.offset) : 0,
+      min_importance,
+      limit,
+      offset,
       sort_by: req.query.sort_by as 'importance' | 'access_count' | 'last_seen' | undefined,
       sort_order: req.query.sort_order as 'asc' | 'desc' | undefined
     };
@@ -88,10 +91,10 @@ router.get('/entities', authenticateToken, async (req: Request, res: Response) =
 });
 
 /**
- * Get entity statistics
- * GET /api/v2/context/entities/stats
+ * Get entity by ID
+ * GET /api/v2/context/entities/:id
  */
-router.get('/entities/stats', authenticateToken, async (req: Request, res: Response) => {
+router.get('/entities/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
     const entityStore = getEntityStore();
     const stats = await entityStore.getStatistics();
@@ -236,6 +239,14 @@ router.get('/suggestions/:workflowId', authenticateToken, async (req: Request, r
  */
 router.post('/suggestions/:id/apply', authenticateToken, async (req: Request, res: Response) => {
   try {
+    // Validate request body
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request body'
+      });
+    }
+
     const learningModel = getLearningModel();
     await learningModel.applySuggestion(req.params.id, req.body);
 
@@ -258,6 +269,14 @@ router.post('/suggestions/:id/apply', authenticateToken, async (req: Request, re
  */
 router.post('/models/train', authenticateToken, async (req: Request, res: Response) => {
   try {
+    // Validate request body
+    if (!req.body || typeof req.body !== 'object') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid request body'
+      });
+    }
+
     const learningModel = getLearningModel();
     const model = await learningModel.trainModel(req.body);
 
