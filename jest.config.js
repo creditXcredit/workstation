@@ -4,6 +4,15 @@ module.exports = {
   roots: ['<rootDir>/src', '<rootDir>/tests'],
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  globals: {
+    'ts-jest': {
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        types: ['jest', 'node'],
+      },
+    },
+  },
   transformIgnorePatterns: [
     'node_modules/(?!(@octokit|undici|cheerio|before-after-hook|universal-user-agent|@octokit\\/.*)/)',
   ],
@@ -16,6 +25,7 @@ module.exports = {
       tsconfig: {
         esModuleInterop: true,
         allowSyntheticDefaultImports: true,
+        types: ['jest', 'node'],
       },
     }],
   },
