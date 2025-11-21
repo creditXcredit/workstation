@@ -8,6 +8,8 @@ import { EmailAgent } from '../integration/email';
 import { SheetsAgent } from '../integration/sheets';
 import { CalendarAgent } from '../integration/calendar';
 import { FileAgent } from '../storage/file';
+import { DatabaseAgent } from '../storage/database';
+import { S3Agent } from '../storage/s3';
 import { RssAgent } from '../data/rss';
 import { CsvAgent } from '../data/csv';
 import { JsonAgent } from '../data/json';
@@ -73,6 +75,19 @@ export class AgentRegistry {
       agent_type: 'calendar',
       actions: ['authenticate', 'createEvent', 'listEvents', 'getEvent', 'updateEvent', 'deleteEvent', 'checkAvailability'],
       description: 'Google Calendar integration with OAuth2 support'
+    });
+
+    // Phase 10: Storage agents
+    this.registerCapability({
+      agent_type: 'database',
+      actions: ['connect', 'disconnect', 'query', 'insert', 'update', 'delete', 'transaction', 'getTableInfo'],
+      description: 'Database operations (PostgreSQL and SQLite)'
+    });
+
+    this.registerCapability({
+      agent_type: 's3',
+      actions: ['uploadFile', 'downloadFile', 'listFiles', 'deleteFile', 'getFileInfo', 'generatePresignedUrl', 'copyFile', 'moveFile'],
+      description: 'S3 and S3-compatible cloud storage operations'
     });
 
     // Phase 1: Data agents
@@ -487,6 +502,100 @@ export class AgentRegistry {
               return await pdfAgent.splitPdf(params as never);
             default:
               throw new Error(`Unknown PDF action: ${action}`);
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 10: Database agent
+    if (agentType === 'database') {
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          // Database config should be passed in params
+          const dbConfig = (params as any).dbConfig || {
+            type: 'postgresql' as const,
+            useExistingConnection: true
+          };
+          
+          const databaseAgent = new DatabaseAgent(dbConfig);
+          
+          try {
+            // Connect for operations (except connect/disconnect actions)
+            if (action !== 'connect' && action !== 'disconnect') {
+              await databaseAgent.connect();
+            }
+
+            switch (action) {
+              case 'connect':
+                return await databaseAgent.connect();
+              case 'disconnect':
+                return await databaseAgent.disconnect();
+              case 'query':
+                return await databaseAgent.query(params as never);
+              case 'insert':
+                return await databaseAgent.insert(params as never);
+              case 'update':
+                return await databaseAgent.update(params as never);
+              case 'delete':
+                return await databaseAgent.delete(params as never);
+              case 'transaction':
+                return await databaseAgent.transaction(params as never);
+              case 'getTableInfo':
+                return await databaseAgent.getTableInfo(params as never);
+              default:
+                throw new Error(`Unknown database action: ${action}`);
+            }
+          } finally {
+            // Cleanup connection (except for connect/disconnect actions)
+            if (action !== 'connect' && action !== 'disconnect') {
+              await databaseAgent.disconnect();
+            }
+          }
+        }
+      };
+
+      this.agents.set(key, actionWrapper);
+      return actionWrapper;
+    }
+
+    // Phase 10: S3 agent
+    if (agentType === 's3') {
+      const actionWrapper: AgentAction = {
+        execute: async (params: Record<string, unknown>) => {
+          // S3 config should be passed in params or use environment variables
+          const s3Config = (params as any).s3Config || {
+            region: process.env.AWS_REGION || 'us-east-1',
+            accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
+            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+            bucket: process.env.AWS_S3_BUCKET || '',
+            endpoint: process.env.AWS_S3_ENDPOINT,
+            forcePathStyle: process.env.AWS_S3_FORCE_PATH_STYLE === 'true'
+          };
+          
+          const s3Agent = new S3Agent(s3Config);
+
+          switch (action) {
+            case 'uploadFile':
+              return await s3Agent.uploadFile(params as never);
+            case 'downloadFile':
+              return await s3Agent.downloadFile(params as never);
+            case 'listFiles':
+              return await s3Agent.listFiles(params as never);
+            case 'deleteFile':
+              return await s3Agent.deleteFile(params as never);
+            case 'getFileInfo':
+              return await s3Agent.getFileInfo(params as never);
+            case 'generatePresignedUrl':
+              return await s3Agent.generatePresignedUrl(params as never);
+            case 'copyFile':
+              return await s3Agent.copyFile(params as never);
+            case 'moveFile':
+              return await s3Agent.moveFile(params as never);
+            default:
+              throw new Error(`Unknown S3 action: ${action}`);
           }
         }
       };

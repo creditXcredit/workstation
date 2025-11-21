@@ -114,39 +114,47 @@ This document outlines the step-by-step implementation plan for completing the m
 ## Phase 3: Storage Agents (Priority: MEDIUM)
 **Goal**: Enable data persistence across various storage systems
 
-### Step 3.1: Database Agent
-- [ ] Create `src/automation/agents/storage/database.ts`
-- [ ] Implement PostgreSQL support (existing connection)
-- [ ] Add SQLite support for lightweight use
-- [ ] Support basic CRUD operations
-- [ ] Add query builder helpers
-- [ ] Wire to agent registry
+### Step 3.1: Database Agent ✅ COMPLETE
+- [x] Create `src/automation/agents/storage/database.ts`
+- [x] Implement PostgreSQL support (existing connection)
+- [x] Add SQLite support for lightweight use
+- [x] Support basic CRUD operations
+- [x] Add transaction support
+- [x] Add table schema introspection
+- [x] Wire to agent registry
 - [ ] Add unit tests in `tests/agents/storage/database.test.ts`
-- [ ] Update documentation
+- [x] Update documentation
 
 **Capabilities**:
-- `query`: Execute SQL query
-- `insert`: Insert records
+- `connect`: Connect to PostgreSQL or SQLite database
+- `disconnect`: Close database connection
+- `query`: Execute SQL query with parameters
+- `insert`: Insert records (single or batch)
 - `update`: Update records
 - `delete`: Delete records
 - `transaction`: Execute transactional operations
+- `getTableInfo`: Get table schema and index information
 
-### Step 3.2: S3/Cloud Storage Agent
-- [ ] Create `src/automation/agents/storage/s3.ts`
-- [ ] Implement AWS S3 SDK integration
-- [ ] Add support for S3-compatible services
-- [ ] Support file upload/download
-- [ ] Add presigned URL generation
-- [ ] Wire to agent registry
+### Step 3.2: S3/Cloud Storage Agent ✅ COMPLETE
+- [x] Create `src/automation/agents/storage/s3.ts`
+- [x] Implement AWS S3 SDK v3 integration
+- [x] Add support for S3-compatible services (MinIO, DigitalOcean Spaces)
+- [x] Support file upload/download
+- [x] Add presigned URL generation
+- [x] Support file copy/move operations
+- [x] Wire to agent registry
 - [ ] Add unit tests in `tests/agents/storage/s3.test.ts`
-- [ ] Update documentation
+- [x] Update documentation
 
 **Capabilities**:
-- `upload_file`: Upload file to S3
-- `download_file`: Download file from S3
-- `list_files`: List files in bucket
-- `delete_file`: Delete file from S3
-- `generate_presigned_url`: Create temporary access URLs
+- `uploadFile`: Upload file to S3 bucket
+- `downloadFile`: Download file from S3
+- `listFiles`: List files in bucket (with prefix filtering)
+- `deleteFile`: Delete file from S3
+- `getFileInfo`: Get file metadata
+- `generatePresignedUrl`: Create temporary access URLs
+- `copyFile`: Copy file within bucket
+- `moveFile`: Move file to different location
 
 ## Phase 4: Orchestration Features (Priority: HIGH)
 **Goal**: Enable advanced workflow orchestration capabilities
