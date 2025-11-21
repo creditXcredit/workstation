@@ -22,15 +22,45 @@
 
         // Node types available for workflow building
         const NODE_TYPES = {
-            START: { type: 'start', label: 'Start', color: '#4CAF50' },
-            NAVIGATE: { type: 'navigate', label: 'Navigate', color: '#2196F3' },
-            CLICK: { type: 'click', label: 'Click Element', color: '#FF9800' },
-            FILL: { type: 'fill', label: 'Fill Form', color: '#9C27B0' },
-            EXTRACT: { type: 'extract', label: 'Extract Data', color: '#00BCD4' },
-            WAIT: { type: 'wait', label: 'Wait', color: '#FFC107' },
-            CONDITION: { type: 'condition', label: 'Condition', color: '#F44336' },
-            LOOP: { type: 'loop', label: 'Loop', color: '#E91E63' },
-            END: { type: 'end', label: 'End', color: '#607D8B' }
+            START: { type: 'start', label: 'Start', color: '#4CAF50', category: 'control' },
+            NAVIGATE: { type: 'navigate', label: 'Navigate', color: '#2196F3', category: 'browser' },
+            CLICK: { type: 'click', label: 'Click Element', color: '#FF9800', category: 'browser' },
+            FILL: { type: 'fill', label: 'Fill Form', color: '#9C27B0', category: 'browser' },
+            EXTRACT: { type: 'extract', label: 'Extract Data', color: '#00BCD4', category: 'browser' },
+            WAIT: { type: 'wait', label: 'Wait', color: '#FFC107', category: 'browser' },
+            CONDITION: { type: 'condition', label: 'Condition', color: '#F44336', category: 'control' },
+            LOOP: { type: 'loop', label: 'Loop', color: '#E91E63', category: 'control' },
+            
+            // Data Agents
+            CSV_PARSE: { type: 'csv_parse', label: 'Parse CSV', color: '#8BC34A', category: 'data' },
+            CSV_WRITE: { type: 'csv_write', label: 'Write CSV', color: '#7CB342', category: 'data' },
+            JSON_PARSE: { type: 'json_parse', label: 'Parse JSON', color: '#03A9F4', category: 'data' },
+            JSON_QUERY: { type: 'json_query', label: 'Query JSON', color: '#0288D1', category: 'data' },
+            EXCEL_READ: { type: 'excel_read', label: 'Read Excel', color: '#4CAF50', category: 'data' },
+            EXCEL_WRITE: { type: 'excel_write', label: 'Write Excel', color: '#388E3C', category: 'data' },
+            PDF_EXTRACT: { type: 'pdf_extract', label: 'Extract PDF', color: '#F44336', category: 'data' },
+            PDF_GENERATE: { type: 'pdf_generate', label: 'Generate PDF', color: '#D32F2F', category: 'data' },
+            
+            // Integration Agents
+            SHEETS_READ: { type: 'sheets_read', label: 'Read Sheet', color: '#34A853', category: 'integration' },
+            SHEETS_WRITE: { type: 'sheets_write', label: 'Write Sheet', color: '#0F9D58', category: 'integration' },
+            CALENDAR_CREATE: { type: 'calendar_create', label: 'Create Event', color: '#4285F4', category: 'integration' },
+            CALENDAR_LIST: { type: 'calendar_list', label: 'List Events', color: '#1967D2', category: 'integration' },
+            EMAIL_SEND: { type: 'email_send', label: 'Send Email', color: '#EA4335', category: 'integration' },
+            EMAIL_READ: { type: 'email_read', label: 'Read Email', color: '#C5221F', category: 'integration' },
+            
+            // Storage Agents
+            DATABASE_QUERY: { type: 'database_query', label: 'DB Query', color: '#FF9800', category: 'storage' },
+            DATABASE_INSERT: { type: 'database_insert', label: 'DB Insert', color: '#F57C00', category: 'storage' },
+            S3_UPLOAD: { type: 's3_upload', label: 'S3 Upload', color: '#FF6F00', category: 'storage' },
+            S3_DOWNLOAD: { type: 's3_download', label: 'S3 Download', color: '#E65100', category: 'storage' },
+            FILE_READ: { type: 'file_read', label: 'Read File', color: '#795548', category: 'storage' },
+            FILE_WRITE: { type: 'file_write', label: 'Write File', color: '#5D4037', category: 'storage' },
+            
+            // Orchestration
+            PARALLEL: { type: 'parallel', label: 'Parallel', color: '#9C27B0', category: 'orchestration' },
+            
+            END: { type: 'end', label: 'End', color: '#607D8B', category: 'control' }
         };
 
         // WorkflowNode Component
@@ -68,11 +98,40 @@
 
         // NodeLibrary Component
         function NodeLibrary({ onAddNode }) {
+            const [activeCategory, setActiveCategory] = useState('all');
+            
+            // Group nodes by category
+            const categories = {
+                all: 'All',
+                control: 'Control',
+                browser: 'Browser',
+                data: 'Data',
+                integration: 'Integration',
+                storage: 'Storage',
+                orchestration: 'Orchestration'
+            };
+            
+            const filteredNodes = Object.entries(NODE_TYPES).filter(([key, nodeType]) => {
+                if (activeCategory === 'all') return true;
+                return nodeType.category === activeCategory;
+            });
+            
             return (
                 <div className="node-library">
                     <h3>Node Library</h3>
+                    <div className="node-categories">
+                        {Object.entries(categories).map(([key, label]) => (
+                            <button
+                                key={key}
+                                className={`category-btn ${activeCategory === key ? 'active' : ''}`}
+                                onClick={() => setActiveCategory(key)}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                     <div className="node-library-items">
-                        {Object.entries(NODE_TYPES).map(([key, nodeType]) => (
+                        {filteredNodes.map(([key, nodeType]) => (
                             <button
                                 key={key}
                                 className="node-library-item"
@@ -304,8 +363,9 @@
                         parameters: {}
                     };
 
-                    // Map node parameters to task parameters
+                    // Map node parameters to task parameters based on agent type
                     switch (node.type) {
+                        // Browser actions
                         case 'navigate':
                             task.parameters = { url: node.params.url || 'https://example.com' };
                             break;
@@ -336,6 +396,194 @@
                             };
                             task.action = 'evaluate';
                             break;
+                        
+                        // CSV agent
+                        case 'csv_parse':
+                            task.agent_type = 'csv';
+                            task.action = 'parseCsv';
+                            task.parameters = { 
+                                input: node.params.input || '',
+                                hasHeader: node.params.hasHeader !== false
+                            };
+                            break;
+                        case 'csv_write':
+                            task.agent_type = 'csv';
+                            task.action = 'writeCsv';
+                            task.parameters = { 
+                                data: node.params.data || [],
+                                includeHeader: node.params.includeHeader !== false
+                            };
+                            break;
+                        
+                        // JSON agent
+                        case 'json_parse':
+                            task.agent_type = 'json';
+                            task.action = 'parseJson';
+                            task.parameters = { 
+                                input: node.params.input || '{}'
+                            };
+                            break;
+                        case 'json_query':
+                            task.agent_type = 'json';
+                            task.action = 'queryJson';
+                            task.parameters = { 
+                                data: node.params.data || {},
+                                query: node.params.query || '$'
+                            };
+                            break;
+                        
+                        // Excel agent
+                        case 'excel_read':
+                            task.agent_type = 'excel';
+                            task.action = 'readExcel';
+                            task.parameters = { 
+                                filePath: node.params.filePath || '',
+                                sheetName: node.params.sheetName
+                            };
+                            break;
+                        case 'excel_write':
+                            task.agent_type = 'excel';
+                            task.action = 'writeExcel';
+                            task.parameters = { 
+                                data: node.params.data || [],
+                                sheetName: node.params.sheetName || 'Sheet1'
+                            };
+                            break;
+                        
+                        // PDF agent
+                        case 'pdf_extract':
+                            task.agent_type = 'pdf';
+                            task.action = 'extractText';
+                            task.parameters = { 
+                                filePath: node.params.filePath || ''
+                            };
+                            break;
+                        case 'pdf_generate':
+                            task.agent_type = 'pdf';
+                            task.action = 'generatePdf';
+                            task.parameters = { 
+                                content: node.params.content || '',
+                                outputPath: node.params.outputPath || ''
+                            };
+                            break;
+                        
+                        // Google Sheets agent
+                        case 'sheets_read':
+                            task.agent_type = 'sheets';
+                            task.action = 'readSheet';
+                            task.parameters = { 
+                                spreadsheetId: node.params.spreadsheetId || '',
+                                range: node.params.range || 'Sheet1!A1:Z100'
+                            };
+                            break;
+                        case 'sheets_write':
+                            task.agent_type = 'sheets';
+                            task.action = 'writeSheet';
+                            task.parameters = { 
+                                spreadsheetId: node.params.spreadsheetId || '',
+                                range: node.params.range || 'Sheet1!A1',
+                                values: node.params.values || [[]]
+                            };
+                            break;
+                        
+                        // Google Calendar agent
+                        case 'calendar_create':
+                            task.agent_type = 'calendar';
+                            task.action = 'createEvent';
+                            task.parameters = { 
+                                summary: node.params.summary || 'New Event',
+                                start: node.params.start || new Date().toISOString(),
+                                end: node.params.end || new Date(Date.now() + 3600000).toISOString()
+                            };
+                            break;
+                        case 'calendar_list':
+                            task.agent_type = 'calendar';
+                            task.action = 'listEvents';
+                            task.parameters = { 
+                                timeMin: node.params.timeMin || new Date().toISOString(),
+                                maxResults: node.params.maxResults || 10
+                            };
+                            break;
+                        
+                        // Email agent
+                        case 'email_send':
+                            task.agent_type = 'email';
+                            task.action = 'sendEmail';
+                            task.parameters = { 
+                                to: node.params.to || '',
+                                subject: node.params.subject || '',
+                                body: node.params.body || ''
+                            };
+                            break;
+                        case 'email_read':
+                            task.agent_type = 'email';
+                            task.action = 'getUnreadEmails';
+                            task.parameters = { 
+                                maxResults: node.params.maxResults || 10
+                            };
+                            break;
+                        
+                        // Database agent
+                        case 'database_query':
+                            task.agent_type = 'database';
+                            task.action = 'query';
+                            task.parameters = { 
+                                sql: node.params.sql || 'SELECT 1',
+                                params: node.params.params || []
+                            };
+                            break;
+                        case 'database_insert':
+                            task.agent_type = 'database';
+                            task.action = 'insert';
+                            task.parameters = { 
+                                table: node.params.table || '',
+                                data: node.params.data || {}
+                            };
+                            break;
+                        
+                        // S3 agent
+                        case 's3_upload':
+                            task.agent_type = 's3';
+                            task.action = 'uploadFile';
+                            task.parameters = { 
+                                key: node.params.key || '',
+                                content: node.params.content || ''
+                            };
+                            break;
+                        case 's3_download':
+                            task.agent_type = 's3';
+                            task.action = 'downloadFile';
+                            task.parameters = { 
+                                key: node.params.key || ''
+                            };
+                            break;
+                        
+                        // File agent
+                        case 'file_read':
+                            task.agent_type = 'file';
+                            task.action = 'readFile';
+                            task.parameters = { 
+                                path: node.params.path || ''
+                            };
+                            break;
+                        case 'file_write':
+                            task.agent_type = 'file';
+                            task.action = 'writeFile';
+                            task.parameters = { 
+                                path: node.params.path || '',
+                                content: node.params.content || ''
+                            };
+                            break;
+                        
+                        // Parallel execution
+                        case 'parallel':
+                            task.agent_type = 'orchestration';
+                            task.action = 'parallel';
+                            task.parameters = { 
+                                tasks: node.params.tasks || []
+                            };
+                            break;
+                        
                         default:
                             task.parameters = node.params || {};
                     }

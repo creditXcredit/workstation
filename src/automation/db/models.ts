@@ -40,7 +40,7 @@ export interface Execution {
   id: string;
   workflow_id: string;
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-  trigger_type?: 'manual' | 'scheduled' | 'webhook' | 'slack';
+  trigger_type?: 'manual' | 'scheduled' | 'webhook' | 'slack' | 'chain' | 'trigger';
   triggered_by?: string;
   started_at?: string;
   completed_at?: string;
@@ -80,6 +80,6 @@ export interface CreateWorkflowInput {
 export interface ExecuteWorkflowInput {
   workflow_id: string;
   triggered_by?: string;
-  trigger_type?: 'manual' | 'scheduled' | 'webhook' | 'slack';
+  trigger_type?: 'manual' | 'scheduled' | 'webhook' | 'slack' | 'chain' | 'trigger';
   variables?: Record<string, unknown>;
 }
