@@ -41,18 +41,34 @@ export class WorkstationAPIBridge {
       ...options.headers
     };
 
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout
 
-    const data = await response.json();
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal
+      });
 
-    if (!response.ok) {
-      throw new Error(data.error || `HTTP ${response.status}`);
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        throw new Error('Invalid JSON response from server');
+      }
+
+      if (!response.ok) {
+        throw new Error(data && data.error ? data.error : `HTTP ${response.status}`);
+      }
+
+      return data;
+    } finally {
+      clearTimeout(timeout);
     }
-
-    return data;
   }
 
   // ============ AGENT MANAGEMENT ============
@@ -103,6 +119,15 @@ export class WorkstationAPIBridge {
    * Create agent task
    */
   async createAgentTask(agentId, type, payload, priority = 5) {
+    if (!agentId || typeof agentId !== 'string') {
+      throw new Error('Invalid agentId');
+    }
+    if (!type || typeof type !== 'string') {
+      throw new Error('Invalid task type');
+    }
+    if (priority < 1 || priority > 10) {
+      throw new Error('Priority must be between 1 and 10');
+    }
     return this.request('/api/agents/tasks', {
       method: 'POST',
       body: JSON.stringify({ agentId, type, payload, priority })
@@ -276,8 +301,20 @@ export class WorkstationAPIBridge {
       return; // Already connected
     }
 
-    const wsUrl = this.baseUrl.replace(/^http/, 'ws') + '/ws';
+    // Robust WebSocket URL construction
+    let wsUrl;
+    try {
+      const url = new URL(this.baseUrl);
+      url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Ensure single trailing slash before 'ws'
+      url.pathname = url.pathname.replace(/\/+$/, '') + '/ws';
+      wsUrl = url.toString();
+    } catch (e) {
+      console.error('Invalid baseUrl for WebSocket:', this.baseUrl, e);
+      return;
+    }
     
+    this.shouldReconnect = true;
     this.wsConnection = new WebSocket(wsUrl);
 
     this.wsConnection.onopen = () => {
@@ -311,9 +348,9 @@ export class WorkstationAPIBridge {
       console.log('🔌 WebSocket disconnected');
       this.emit('ws:disconnected');
       
-      // Auto-reconnect after 5 seconds
+      // Auto-reconnect after 5 seconds if not intentionally disconnected
       setTimeout(() => {
-        if (this.wsConnection) {
+        if (this.shouldReconnect) {
           this.connectWebSocket();
         }
       }, 5000);
@@ -324,6 +361,7 @@ export class WorkstationAPIBridge {
    * Disconnect WebSocket
    */
   disconnectWebSocket() {
+    this.shouldReconnect = false;
     if (this.wsConnection) {
       this.wsConnection.close();
       this.wsConnection = null;
@@ -442,11 +480,13 @@ let apiBridgeInstance = null;
 export function getAPIBridge(baseUrl, token) {
   if (!apiBridgeInstance) {
     apiBridgeInstance = new WorkstationAPIBridge(baseUrl, token);
-  } else if (baseUrl) {
-    apiBridgeInstance.setBaseUrl(baseUrl);
-  }
-  if (token) {
-    apiBridgeInstance.setToken(token);
+  } else {
+    if (baseUrl !== undefined) {
+      apiBridgeInstance.setBaseUrl(baseUrl);
+    }
+    if (token !== undefined) {
+      apiBridgeInstance.setToken(token);
+    }
   }
   return apiBridgeInstance;
 }

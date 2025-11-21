@@ -30,16 +30,15 @@ let apiBridge = null;
 // Initialize Playwright execution engine
 const playwrightExecution = new PlaywrightExecution();
 const retryManager = new PlaywrightRetryManager();
-const networkMonitor = PlaywrightNetworkMonitor.getInstance();
-const selfHealingSelectors = new SelfHealingSelectors();
 
 // Initialize agentic components
-const agenticNetworkMonitor = AgenticNetworkMonitor.getInstance();
 const agenticContextLearner = new AgenticContextLearner();
 
 // Initialize context learner
 agenticContextLearner.initialize().then(() => {
   console.log('🧠 Agentic context learner initialized in background');
+}).catch((error) => {
+  console.error('❌ Failed to initialize context learner:', error);
 });
 
 console.log('🚀 Workstation extension with full backend integration initialized');
@@ -57,6 +56,9 @@ chrome.runtime.onInstalled.addListener(async () => {
     
     // Initialize API Bridge
     const response = await fetch(`${backendUrl}/auth/demo-token`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
     const data = await response.json();
     workstationToken = data.token;
     await chrome.storage.local.set({ workstationToken });
@@ -73,6 +75,12 @@ chrome.runtime.onInstalled.addListener(async () => {
     console.log('✅ Workstation token stored and API bridge initialized');
   } catch (error) {
     console.error('❌ Failed to initialize:', error);
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon48.png',
+      title: 'Extension Initialization Failed',
+      message: 'Could not connect to backend. Please check settings.'
+    });
   }
 });
 
@@ -116,8 +124,11 @@ function notifyPopup(event, data) {
     type: 'background:event',
     event,
     data
-  }).catch(() => {
-    // Popup might not be open, ignore error
+  }).catch((error) => {
+    // Only ignore if popup is not open
+    if (!error || error.message !== 'Could not establish connection. Receiving end does not exist.') {
+      console.error('Failed to notify popup:', error);
+    }
   });
 }
 
@@ -261,8 +272,7 @@ async function executeWorkflowHandler(request, sender, sendResponse) {
     if (request.useLocal) {
       const tabId = sender.tab?.id || request.tabId;
       if (tabId) {
-        const executionId = await playwrightExecution.executeWorkflow(request.workflow, tabId, sendResponse);
-        sendResponse({ success: true, executionId, isLocal: true });
+        await playwrightExecution.executeWorkflow(request.workflow, tabId, sendResponse);
       } else {
         sendResponse({ success: false, error: 'No tab ID provided' });
       }

@@ -824,7 +824,8 @@ function startAgentStatusMonitoring() {
   if (agentStatusInterval) clearInterval(agentStatusInterval);
   
   agentStatusInterval = setInterval(() => {
-    if (document.querySelector('[data-tab="builder"]').classList.contains('active')) {
+    const builderTab = document.querySelector('[data-tab="builder"]');
+    if (builderTab && builderTab.classList.contains('active')) {
       displayAgentStatus();
     }
   }, 5000);
@@ -835,3 +836,10 @@ setTimeout(() => {
   displayAgentStatus();
   startAgentStatusMonitoring();
 }, 1000);
+
+// Cleanup interval when popup is closed to prevent memory leaks
+window.addEventListener('unload', () => {
+  if (agentStatusInterval) {
+    clearInterval(agentStatusInterval);
+  }
+});
