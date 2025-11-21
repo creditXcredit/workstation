@@ -248,6 +248,12 @@
             const [isDragging, setIsDragging] = useState(false);
             const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
             const [nextNodeId, setNextNodeId] = useState(1);
+            const [currentWorkflowId, setCurrentWorkflowId] = useState(null);
+            const [isExecuting, setIsExecuting] = useState(false);
+            const [executionStatus, setExecutionStatus] = useState(null);
+            const [executionHistory, setExecutionHistory] = useState([]);
+            const [showHistory, setShowHistory] = useState(false);
+            const [connectingNode, setConnectingNode] = useState(null);
 
             const addNode = (type) => {
                 const newNode = {
@@ -282,7 +288,75 @@
             const handleCanvasClick = (e) => {
                 if (e.target.className === 'workflow-canvas' || e.target.className === 'connections-svg') {
                     setSelectedNode(null);
+                    setConnectingNode(null);
                 }
+            };
+
+            const addConnection = (fromId, toId) => {
+                const existingConnection = connections.find(c => c.from === fromId && c.to === toId);
+                if (!existingConnection) {
+                    setConnections([...connections, { from: fromId, to: toId }]);
+                }
+            };
+
+            const getToken = () => {
+                return localStorage.getItem('authToken') || '';
+            };
+
+            const convertNodesToWorkflow = () => {
+                // Convert visual builder nodes to backend workflow format
+                const tasks = nodes.map(node => {
+                    const task = {
+                        name: node.label || node.type,
+                        agent_type: 'browser',
+                        action: node.type,
+                        parameters: {}
+                    };
+
+                    // Map node parameters to task parameters
+                    switch (node.type) {
+                        case 'navigate':
+                            task.parameters = { url: node.params.url || 'https://example.com' };
+                            break;
+                        case 'click':
+                            task.parameters = { selector: node.params.selector || 'button' };
+                            break;
+                        case 'fill':
+                            task.parameters = { 
+                                selector: node.params.selector || 'input',
+                                text: node.params.value || ''
+                            };
+                            task.action = 'type';
+                            break;
+                        case 'extract':
+                            task.parameters = { 
+                                selector: node.params.selector || 'body'
+                            };
+                            task.action = 'getText';
+                            break;
+                        case 'wait':
+                            task.parameters = { 
+                                duration: parseInt(node.params.duration) || 1000
+                            };
+                            break;
+                        case 'condition':
+                            task.parameters = { 
+                                condition: node.params.condition || 'true'
+                            };
+                            task.action = 'evaluate';
+                            break;
+                        default:
+                            task.parameters = node.params || {};
+                    }
+
+                    return task;
+                });
+
+                return {
+                    tasks,
+                    variables: {},
+                    on_error: 'stop'
+                };
             };
 
             const exportWorkflow = () => {
@@ -323,15 +397,26 @@
             };
 
             const saveWorkflow = async () => {
+                if (nodes.length === 0) {
+                    alert('Please add some nodes to the workflow first');
+                    return;
+                }
+
+                const workflowDefinition = convertNodesToWorkflow();
                 const workflow = {
                     name: workflowName,
-                    nodes: nodes,
-                    connections: connections
+                    description: `Visual workflow with ${nodes.length} nodes`,
+                    definition: workflowDefinition
                 };
 
                 try {
-                    const token = localStorage.getItem('authToken');
-                    const response = await fetch('/api/workflows', {
+                    const token = getToken();
+                    if (!token) {
+                        alert('Please login first. Token not found in localStorage.');
+                        return;
+                    }
+
+                    const response = await fetch('/api/v2/workflows', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -341,14 +426,187 @@
                     });
 
                     if (response.ok) {
+                        const result = await response.json();
+                        setCurrentWorkflowId(result.data.id);
                         alert('Workflow saved successfully!');
                     } else {
-                        alert('Failed to save workflow');
+                        const error = await response.json();
+                        alert('Failed to save workflow: ' + (error.error || response.statusText));
                     }
                 } catch (error) {
                     alert('Error saving workflow: ' + error.message);
                 }
             };
+
+            const executeWorkflow = async () => {
+                if (nodes.length === 0) {
+                    alert('Please add some nodes to the workflow first');
+                    return;
+                }
+
+                setIsExecuting(true);
+                setExecutionStatus({ status: 'starting', message: 'Starting workflow execution...' });
+
+                try {
+                    const token = getToken();
+                    if (!token) {
+                        alert('Please login first. Token not found in localStorage.');
+                        setIsExecuting(false);
+                        return;
+                    }
+
+                    let workflowId = currentWorkflowId;
+
+                    // If no workflow ID, create workflow first
+                    if (!workflowId) {
+                        const workflowDefinition = convertNodesToWorkflow();
+                        const workflow = {
+                            name: workflowName,
+                            description: `Visual workflow with ${nodes.length} nodes`,
+                            definition: workflowDefinition
+                        };
+
+                        const createResponse = await fetch('/api/v2/workflows', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(workflow)
+                        });
+
+                        if (!createResponse.ok) {
+                            throw new Error('Failed to create workflow');
+                        }
+
+                        const createResult = await createResponse.json();
+                        workflowId = createResult.data.id;
+                        setCurrentWorkflowId(workflowId);
+                    }
+
+                    // Execute workflow
+                    const executeResponse = await fetch(`/api/v2/workflows/${workflowId}/execute`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: JSON.stringify({ variables: {} })
+                    });
+
+                    if (!executeResponse.ok) {
+                        throw new Error('Failed to execute workflow');
+                    }
+
+                    const executeResult = await executeResponse.json();
+                    const executionId = executeResult.data.id;
+
+                    // Start polling for status
+                    pollExecutionStatus(executionId);
+                } catch (error) {
+                    setIsExecuting(false);
+                    setExecutionStatus({ status: 'error', message: 'Execution failed: ' + error.message });
+                }
+            };
+
+            const pollExecutionStatus = async (executionId) => {
+                const token = getToken();
+                const maxPolls = 120; // 2 minutes max
+                let pollCount = 0;
+
+                const poll = async () => {
+                    try {
+                        const response = await fetch(`/api/v2/executions/${executionId}/status`, {
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Failed to get execution status');
+                        }
+
+                        const result = await response.json();
+                        const { status, progress, error_message } = result.data;
+
+                        setExecutionStatus({ 
+                            status, 
+                            message: `Status: ${status} (${progress}%)`,
+                            progress,
+                            error: error_message
+                        });
+
+                        if (status === 'completed') {
+                            setIsExecuting(false);
+                            // Get logs and add to history
+                            await fetchExecutionLogs(executionId);
+                            loadExecutionHistory();
+                            return;
+                        } else if (status === 'failed') {
+                            setIsExecuting(false);
+                            await fetchExecutionLogs(executionId);
+                            loadExecutionHistory();
+                            return;
+                        } else if (pollCount < maxPolls) {
+                            pollCount++;
+                            setTimeout(poll, 1000); // Poll every second
+                        } else {
+                            setIsExecuting(false);
+                            setExecutionStatus({ status: 'timeout', message: 'Execution timed out' });
+                        }
+                    } catch (error) {
+                        setIsExecuting(false);
+                        setExecutionStatus({ status: 'error', message: error.message });
+                    }
+                };
+
+                poll();
+            };
+
+            const fetchExecutionLogs = async (executionId) => {
+                const token = getToken();
+                try {
+                    const response = await fetch(`/api/v2/executions/${executionId}/logs`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        setExecutionStatus(prev => ({
+                            ...prev,
+                            logs: result.data.logs
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch logs:', error);
+                }
+            };
+
+            const loadExecutionHistory = async () => {
+                const token = getToken();
+                if (!token) return;
+
+                try {
+                    const response = await fetch('/api/v2/workflows', {
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        setExecutionHistory(result.data || []);
+                    }
+                } catch (error) {
+                    console.error('Failed to load history:', error);
+                }
+            };
+
+            useEffect(() => {
+                loadExecutionHistory();
+            }, []);
 
             return (
                 <div className="workflow-builder">
@@ -371,8 +629,41 @@
                             </label>
                             <button className="btn btn-secondary" onClick={exportWorkflow}>Export</button>
                             <button className="btn btn-primary" onClick={saveWorkflow}>Save</button>
+                            <button className="btn btn-success" onClick={executeWorkflow} disabled={isExecuting}>
+                                {isExecuting ? '⏳ Executing...' : '🚀 Execute'}
+                            </button>
+                            <button className="btn btn-info" onClick={() => setShowHistory(!showHistory)}>
+                                📊 History
+                            </button>
                         </div>
                     </div>
+                    
+                    {executionStatus && (
+                        <div className={`execution-status status-${executionStatus.status}`}>
+                            <strong>{executionStatus.message}</strong>
+                            {executionStatus.progress && (
+                                <div className="progress-bar">
+                                    <div className="progress-fill" style={{ width: `${executionStatus.progress}%` }}></div>
+                                </div>
+                            )}
+                            {executionStatus.error && (
+                                <div className="error-message">Error: {executionStatus.error}</div>
+                            )}
+                            {executionStatus.logs && (
+                                <details className="logs-details">
+                                    <summary>View Logs ({executionStatus.logs.length} entries)</summary>
+                                    <div className="logs-container">
+                                        {executionStatus.logs.map((log, idx) => (
+                                            <div key={idx} className={`log-entry log-${log.level}`}>
+                                                <span className="log-time">{new Date(log.timestamp).toLocaleTimeString()}</span>
+                                                <span className="log-message">{log.message}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </details>
+                            )}
+                        </div>
+                    )}
                     
                     <div className="builder-main">
                         <NodeLibrary onAddNode={addNode} />
@@ -402,10 +693,33 @@
                         />
                     </div>
 
+                    {showHistory && (
+                        <div className="history-panel">
+                            <div className="history-header">
+                                <h3>Execution History</h3>
+                                <button className="btn btn-secondary" onClick={() => setShowHistory(false)}>Close</button>
+                            </div>
+                            <div className="history-list">
+                                {executionHistory.length === 0 ? (
+                                    <div className="history-empty">No workflow history yet</div>
+                                ) : (
+                                    executionHistory.map(workflow => (
+                                        <div key={workflow.id} className="history-item">
+                                            <div className="history-item-name">{workflow.name}</div>
+                                            <div className="history-item-time">{new Date(workflow.created_at).toLocaleString()}</div>
+                                            <div className="history-item-status">{workflow.status}</div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+
                     <div className="builder-footer">
                         <div className="footer-stats">
                             <span>Nodes: {nodes.length}</span>
                             <span>Connections: {connections.length}</span>
+                            {currentWorkflowId && <span>ID: {currentWorkflowId.substring(0, 8)}...</span>}
                         </div>
                         <div className="footer-actions">
                             <button className="btn-link" onClick={() => window.location.href = '/dashboard.html'}>

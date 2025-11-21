@@ -461,6 +461,7 @@
     <!-- Tab Navigation -->
     <div class="tabs">
       <button class="tab active" data-tab="execute">Execute</button>
+      <button class="tab" data-tab="builder">Builder</button>
       <button class="tab" data-tab="templates">Templates</button>
       <button class="tab" data-tab="history">History</button>
       <button class="tab" data-tab="settings">Settings</button>
@@ -498,6 +499,27 @@
           💾 Save
         </button>
       </div>
+    </div>
+    
+    <!-- Builder Tab -->
+    <div class="tab-content" id="builderTab">
+      <h3>Visual Workflow Builder</h3>
+      <p style="font-size: 12px; color: #666; margin-bottom: 12px;">
+        Build workflows visually with drag-and-drop nodes
+      </p>
+      <div class="button-group">
+        <button id="openBuilderBtn" style="flex: 1;">
+          🎨 Open Builder
+        </button>
+      </div>
+      <div style="margin-top: 12px; padding: 12px; background: #f0f4ff; border-radius: 6px; font-size: 11px;">
+        <strong>Quick Actions:</strong>
+        <div style="margin-top: 8px;">
+          <button class="secondary small" id="newWorkflowBtn">➕ New Workflow</button>
+          <button class="secondary small" id="loadWorkflowBtn" style="margin-left: 4px;">📂 Load</button>
+        </div>
+      </div>
+      <div id="builderStatus" class="status"></div>
     </div>
     
     <!-- Templates Tab -->

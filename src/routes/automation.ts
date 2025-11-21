@@ -167,6 +167,158 @@ router.get('/executions/:id/tasks', authenticateToken, async (req: Request, res:
 });
 
 /**
+ * Get execution status (for real-time polling)
+ * GET /api/v2/executions/:id/status
+ */
+router.get('/executions/:id/status', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const execution = await orchestrationEngine.getExecution(req.params.id);
+
+    if (!execution) {
+      return res.status(404).json({
+        success: false,
+        error: 'Execution not found'
+      });
+    }
+
+    // Calculate progress based on completed tasks
+    const tasks = await orchestrationEngine.getExecutionTasks(req.params.id);
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const progress = tasks.length > 0 ? Math.floor((completedTasks / tasks.length) * 100) : 0;
+
+    res.json({
+      success: true,
+      data: {
+        id: execution.id,
+        status: execution.status,
+        progress,
+        started_at: execution.started_at,
+        completed_at: execution.completed_at,
+        duration_ms: execution.duration_ms,
+        error_message: execution.error_message
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to get execution status', { error });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get execution status'
+    });
+  }
+});
+
+/**
+ * Get execution logs (detailed task logs)
+ * GET /api/v2/executions/:id/logs
+ */
+router.get('/executions/:id/logs', authenticateToken, async (req: Request, res: Response) => {
+  try {
+    const execution = await orchestrationEngine.getExecution(req.params.id);
+    const tasks = await orchestrationEngine.getExecutionTasks(req.params.id);
+
+    if (!execution) {
+      return res.status(404).json({
+        success: false,
+        error: 'Execution not found'
+      });
+    }
+
+    // Build log entries from execution and tasks
+    const logs: Array<{
+      timestamp: string;
+      level: string;
+      message: string;
+      details: Record<string, unknown>;
+    }> = [
+      {
+        timestamp: execution.created_at,
+        level: 'info',
+        message: `Execution created: ${execution.id}`,
+        details: { trigger_type: execution.trigger_type, triggered_by: execution.triggered_by }
+      }
+    ];
+
+    if (execution.started_at) {
+      logs.push({
+        timestamp: execution.started_at,
+        level: 'info',
+        message: 'Execution started',
+        details: {}
+      });
+    }
+
+    // Add task logs
+    tasks.forEach(task => {
+      if (task.queued_at) {
+        logs.push({
+          timestamp: task.queued_at,
+          level: 'info',
+          message: `Task queued: ${task.name}`,
+          details: { task_id: task.id, agent_type: task.agent_type, action: task.action }
+        });
+      }
+
+      if (task.started_at) {
+        logs.push({
+          timestamp: task.started_at,
+          level: 'info',
+          message: `Task started: ${task.name}`,
+          details: { task_id: task.id }
+        });
+      }
+
+      if (task.completed_at) {
+        if (task.status === 'completed') {
+          logs.push({
+            timestamp: task.completed_at,
+            level: 'info',
+            message: `Task completed: ${task.name}`,
+            details: { task_id: task.id, output: task.output }
+          });
+        } else if (task.status === 'failed') {
+          logs.push({
+            timestamp: task.completed_at,
+            level: 'error',
+            message: `Task failed: ${task.name}`,
+            details: { task_id: task.id, error: task.error_message, retry_count: task.retry_count }
+          });
+        }
+      }
+    });
+
+    if (execution.completed_at) {
+      logs.push({
+        timestamp: execution.completed_at,
+        level: execution.status === 'completed' ? 'info' : 'error',
+        message: `Execution ${execution.status}`,
+        details: { 
+          duration_ms: execution.duration_ms,
+          error_message: execution.error_message,
+          output: execution.output
+        }
+      });
+    }
+
+    // Sort logs by timestamp
+    logs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    res.json({
+      success: true,
+      data: {
+        execution_id: execution.id,
+        logs
+      }
+    });
+  } catch (error) {
+    logger.error('Failed to get execution logs', { error });
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get execution logs'
+    });
+  }
+});
+
+/**
  * Execute workflow from description (Chrome Extension endpoint)
  * POST /api/v2/execute
  * Creates and executes a workflow in one step

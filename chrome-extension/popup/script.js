@@ -15,6 +15,12 @@ const statusDiv = document.getElementById('status');
 const resultDiv = document.getElementById('result');
 const recordingIndicator = document.getElementById('recordingIndicator');
 
+// DOM elements - Builder Tab
+const openBuilderBtn = document.getElementById('openBuilderBtn');
+const newWorkflowBtn = document.getElementById('newWorkflowBtn');
+const loadWorkflowBtn = document.getElementById('loadWorkflowBtn');
+const builderStatus = document.getElementById('builderStatus');
+
 // DOM elements - History Tab
 const historyList = document.getElementById('historyList');
 const clearHistoryBtn = document.getElementById('clearHistoryBtn');
@@ -170,20 +176,62 @@ saveBtn.addEventListener('click', async () => {
     return;
   }
   
-  const workflow = {
-    id: generateId(),
-    description,
-    timestamp: Date.now(),
-    status: 'saved'
-  };
-  
-  // Add to history
-  const stored = await chrome.storage.local.get(['workflowHistory']);
-  const history = stored.workflowHistory || [];
-  history.push(workflow);
-  await chrome.storage.local.set({ workflowHistory: history });
-  
-  showStatus('✅ Workflow saved successfully!', 'success');
+  try {
+    const token = await getToken();
+    if (!token) {
+      showStatus('Please ensure you are authenticated', 'error');
+      return;
+    }
+
+    // Create workflow object in backend format
+    const workflow = {
+      name: description.substring(0, 50) || 'Untitled Workflow',
+      description: description,
+      definition: {
+        tasks: [
+          {
+            name: 'Execute prompt',
+            agent_type: 'browser',
+            action: 'evaluate',
+            parameters: { 
+              expression: description
+            }
+          }
+        ],
+        variables: {},
+        on_error: 'stop'
+      }
+    };
+
+    // Save to backend
+    const response = await fetch(`${settings.backendUrl}/api/v2/workflows`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(workflow)
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      
+      // Also save to local history
+      await addToHistory({
+        id: result.data.id,
+        description,
+        timestamp: Date.now(),
+        status: 'saved'
+      });
+      
+      showStatus('✅ Workflow saved successfully!', 'success');
+    } else {
+      const error = await response.json();
+      showStatus('Failed to save: ' + (error.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    showStatus('Error saving workflow: ' + error.message, 'error');
+  }
 });
 
 /**
@@ -374,6 +422,51 @@ async function updateHistoryStatus(id, status) {
     item.status = status;
     await chrome.storage.local.set({ workflowHistory: history });
   }
+}
+
+/**
+ * Builder Tab Functions
+ */
+openBuilderBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('../index.html') || `${settings.backendUrl}/workflow-builder.html` });
+});
+
+newWorkflowBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: `${settings.backendUrl}/workflow-builder.html` });
+});
+
+loadWorkflowBtn.addEventListener('click', async () => {
+  try {
+    const response = await fetch(`${settings.backendUrl}/api/v2/workflows`, {
+      headers: {
+        'Authorization': `Bearer ${await getToken()}`
+      }
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      const workflows = result.data || [];
+      
+      if (workflows.length > 0) {
+        // Open builder with first workflow
+        chrome.tabs.create({ 
+          url: `${settings.backendUrl}/workflow-builder.html?load=${workflows[0].id}`
+        });
+      } else {
+        showBuilderStatus('No workflows found', 'info');
+      }
+    }
+  } catch (error) {
+    showBuilderStatus('Failed to load workflows: ' + error.message, 'error');
+  }
+});
+
+function showBuilderStatus(message, type = 'info') {
+  builderStatus.textContent = message;
+  builderStatus.className = `status visible ${type}`;
+  setTimeout(() => {
+    builderStatus.classList.remove('visible');
+  }, 3000);
 }
 
 /**
