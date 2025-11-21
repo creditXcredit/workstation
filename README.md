@@ -49,27 +49,34 @@ Workstation is a **production-ready** browser automation platform that combines:
 ```bash
 # Clone and install
 git clone https://github.com/creditXcredit/workstation.git
-cd workstation && npm install
+cd workstation && npm install && npm run build
 
 # Start server
-npm run dev
-
-# Get authentication token
-curl http://localhost:3000/auth/demo-token
-
-# Build Chrome extension
-npm run build:chrome
-
-# Open dashboard
-open docs/landing.html
+npm start
 ```
 
-**Next Steps:**
-- 📖 [Complete User Guide](docs/guides/HOW_TO_USE_BROWSER_AGENT.md)
+**✨ NOW OPEN YOUR BROWSER:**
+
+🎨 **Visual Workflow Builder:** `http://localhost:3000/workflow-builder.html`  
+📦 **Chrome Extension:** Load `chrome-extension/` folder from `chrome://extensions/`
+
+---
+
+## 📖 How to Use
+
+**👉 [Read the Simple How-To Guide](HOW_TO_USE.md) 👈**
+
+This guide shows you **exactly** how to:
+- ✅ Access the visual workflow builder
+- ✅ Install the Chrome extension  
+- ✅ Create your first workflow
+- ✅ Run and monitor executions
+
+**Other Guides:**
 - 🎯 [30-Second Tutorial](START_HERE.md)
-- 🌐 [Chrome Extension Guide](chrome-extension/README.md)
-- 📚 [Full Documentation](docs/DOCUMENTATION_INDEX.md)
-- 🎨 [Interactive Dashboard](docs/index.html)
+- 📚 [Complete Getting Started](GETTING_STARTED.md)
+- 🌐 [Chrome Extension Details](chrome-extension/README.md)
+- 🔧 [API Documentation](API.md)
 
 ---
 

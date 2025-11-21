@@ -1,5 +1,19 @@
 # Workstation Chrome Extension
 
+## 🚀 Quick Install
+
+**3 simple steps:**
+
+1. **Open Chrome:** Navigate to `chrome://extensions/`
+2. **Enable Developer mode:** Toggle in top-right corner
+3. **Load unpacked:** Click button and select the `chrome-extension/` folder
+
+✅ **Done!** Click the extension icon to start automating.
+
+**Need help?** See [HOW_TO_USE.md](../HOW_TO_USE.md) for step-by-step guide.
+
+---
+
 ## Overview
 
 The Workstation Chrome Extension enables browser automation through a user-friendly popup interface. It integrates with the Workstation API backend to execute workflows using natural language descriptions.
