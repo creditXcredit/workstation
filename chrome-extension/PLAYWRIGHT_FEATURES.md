@@ -2,11 +2,46 @@
 
 ## Overview
 
-The Workstation Chrome Extension now features **enterprise-grade Playwright integration** for true agentic browser automation with self-healing capabilities and resilience.
+The Workstation Chrome Extension now features **enterprise-grade Playwright integration** with **full backend API orchestration** for true agentic browser automation with self-healing capabilities, real-time monitoring, and multi-agent coordination.
 
-## Architecture
+## Architecture Overview
 
-### Core Modules
+### Three-Tier Integration
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Chrome Extension Layer                   │
+│  • Popup UI (5 tabs: Execute, Builder, Templates,         │
+│    History, Settings)                                       │
+│  • Background Service Worker (API Bridge, WebSocket)       │
+│  • Content Scripts (Page Interaction)                      │
+└─────────────────┬──────────────────────────────────────────┘
+                  │
+                  ├─── HTTP/REST ───┐
+                  ├─── WebSocket ───┤
+                  │                 ↓
+┌─────────────────┴────────────────────────────────────────────┐
+│              Playwright Agentic Modules Layer                │
+│  9 Integrated Modules:                                       │
+│  1. Auto-Wait          6. Form Filling                       │
+│  2. Network Monitor    7. Trace Recorder                     │
+│  3. Retry Manager      8. Agentic Network                    │
+│  4. Execution Engine   9. Context Learning                   │
+│  5. Self-Healing                                             │
+└─────────────────┬────────────────────────────────────────────┘
+                  │
+                  ↓
+┌──────────────────────────────────────────────────────────────┐
+│                  Workstation Backend Layer                    │
+│  • Agent Orchestrator (mainpage, codepage, repo-agent,      │
+│    curriculum, designer)                                     │
+│  • Workflow Engine (Create, Execute, Monitor)               │
+│  • Real-Time WebSocket Server                               │
+│  • PostgreSQL/SQLite Database                               │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Core Modules
 
 #### 1. **PlaywrightAutoWait** (`playwright/auto-wait.js`)
 Intelligent element waiting system based on Playwright's auto-waiting concepts.
@@ -548,6 +583,335 @@ monitor.addListener((type, data) => {
 **cancelExecution(executionId)**
 - `executionId` (string): Execution ID
 - Returns: `boolean` Success status
+
+## Backend Integration (v2.0)
+
+### API Bridge
+
+The extension now includes a comprehensive API bridge (`api-bridge.js`) that connects all Playwright modules to the Workstation backend API.
+
+#### Features
+- **JWT Authentication**: Automatic token management
+- **RESTful API Client**: Type-safe requests to all backend endpoints
+- **WebSocket Connection**: Real-time bidirectional communication
+- **Event System**: Subscribe to execution and agent events
+- **Error Handling**: Automatic retry and error classification
+
+#### Core Methods
+
+```javascript
+// Initialize API Bridge
+const bridge = getAPIBridge('http://localhost:3000', jwtToken);
+
+// Agent Management
+await bridge.getAllAgents();
+await bridge.startAgent('mainpage');
+await bridge.createAgentTask('codepage', 'edit', payload);
+
+// Workflow Management
+await bridge.createWorkflow(workflowDef);
+await bridge.executeWorkflow(workflowId, variables);
+await bridge.getWorkflows({ limit: 50 });
+
+// Execution Monitoring
+await bridge.getExecution(executionId);
+await bridge.getExecutionLogs(executionId);
+await bridge.cancelExecution(executionId);
+
+// Real-Time Updates
+bridge.connectWebSocket();
+bridge.on('execution:progress', (data) => {
+  console.log('Progress:', data.progress);
+});
+```
+
+### Multi-Agent Orchestration
+
+The extension integrates with all backend agents:
+
+#### 1. Mainpage Agent
+**Purpose**: Navigation and page interactions
+
+```javascript
+await chrome.runtime.sendMessage({
+  action: 'triggerAgent',
+  agentType: 'mainpage',
+  params: {
+    url: 'https://example.com',
+    waitFor: 'networkidle',
+    screenshot: true
+  }
+});
+```
+
+#### 2. Codepage Agent
+**Purpose**: Code editing and manipulation
+
+```javascript
+await chrome.runtime.sendMessage({
+  action: 'triggerAgent',
+  agentType: 'codepage',
+  params: {
+    file: 'index.js',
+    operation: 'insert',
+    content: 'console.log("Hello");',
+    line: 10
+  }
+});
+```
+
+#### 3. Repo-Agent
+**Purpose**: Repository management
+
+```javascript
+await chrome.runtime.sendMessage({
+  action: 'triggerAgent',
+  agentType: 'repo-agent',
+  params: {
+    action: 'commit',
+    message: 'Update feature',
+    files: ['src/index.js']
+  }
+});
+```
+
+#### 4. Curriculum Agent
+**Purpose**: Learning and skill development
+
+```javascript
+await chrome.runtime.sendMessage({
+  action: 'triggerAgent',
+  agentType: 'curriculum',
+  params: {
+    topic: 'React Hooks',
+    level: 'intermediate',
+    generateExamples: true
+  }
+});
+```
+
+#### 5. Designer Agent
+**Purpose**: UI/UX design automation
+
+```javascript
+await chrome.runtime.sendMessage({
+  action: 'triggerAgent',
+  agentType: 'designer',
+  params: {
+    component: 'button',
+    style: 'modern',
+    variants: ['primary', 'secondary']
+  }
+});
+```
+
+### WebSocket Real-Time Updates
+
+The extension maintains a persistent WebSocket connection for live updates:
+
+#### Event Types
+```javascript
+// Execution Events
+'execution:started'   - Workflow execution began
+'execution:progress'  - Progress update (0-100%)
+'execution:completed' - Execution finished successfully
+'execution:failed'    - Execution encountered error
+
+// Task Events
+'task:created'   - New task created
+'task:updated'   - Task status changed
+
+// Agent Events
+'agent:status'   - Agent status change
+'agent:health'   - Agent health update
+```
+
+#### Example: Subscribe to Execution Updates
+```javascript
+// In background.js
+apiBridge.on('execution:started', (data) => {
+  console.log('Execution started:', data.executionId);
+  // Notify popup
+  notifyPopup('execution:started', data);
+});
+
+apiBridge.on('execution:progress', (data) => {
+  console.log('Progress:', data.progress, '%');
+  // Update UI with progress
+  updateProgressBar(data.executionId, data.progress);
+});
+
+apiBridge.on('execution:completed', (data) => {
+  console.log('Completed:', data.result);
+  // Show results
+  displayResults(data.result);
+});
+```
+
+### Workflow Lifecycle
+
+#### 1. Create Workflow
+```javascript
+const workflow = {
+  name: 'Data Extraction Pipeline',
+  description: 'Extract data from multiple pages',
+  definition: {
+    tasks: [
+      {
+        name: 'Navigate to start page',
+        agent_type: 'mainpage',
+        action: 'navigate',
+        parameters: { url: 'https://data-source.com' }
+      },
+      {
+        name: 'Extract data',
+        agent_type: 'browser',
+        action: 'evaluate',
+        parameters: {
+          expression: 'document.querySelectorAll(".data-row")'
+        }
+      }
+    ],
+    variables: { maxPages: 10 },
+    on_error: 'retry'
+  }
+};
+
+const result = await bridge.createWorkflow(workflow);
+console.log('Created workflow:', result.data.id);
+```
+
+#### 2. Execute Workflow
+```javascript
+const execution = await bridge.executeWorkflow(workflowId, {
+  maxPages: 20,  // Override default
+  timeout: 60000
+});
+
+console.log('Execution ID:', execution.data.executionId);
+
+// Subscribe to updates
+bridge.subscribeToExecution(execution.data.executionId);
+```
+
+#### 3. Monitor Execution
+```javascript
+// Poll for status
+const status = await bridge.getExecution(executionId);
+console.log('Status:', status.data.status); // running, completed, failed
+
+// Get detailed logs
+const logs = await bridge.getExecutionLogs(executionId, {
+  level: 'info',
+  limit: 100
+});
+
+console.log('Logs:', logs.data.logs);
+```
+
+#### 4. Handle Errors
+```javascript
+if (status.data.status === 'failed') {
+  // Get error details
+  const logs = await bridge.getExecutionLogs(executionId, {
+    level: 'error'
+  });
+  
+  // Retry execution
+  const retried = await bridge.retryExecution(executionId);
+  console.log('Retry initiated:', retried.data.executionId);
+}
+```
+
+### Integration with Visual Builder (PR #156)
+
+The extension seamlessly integrates with the visual workflow builder:
+
+```javascript
+// Open builder from extension
+chrome.tabs.create({
+  url: chrome.runtime.getURL('public/workflow-builder.html')
+});
+
+// Load workflow in builder
+chrome.runtime.sendMessage({
+  type: 'builder:load',
+  workflowId: 'wf_12345'
+});
+
+// Export from builder to execution
+chrome.runtime.onMessage.addListener((request) => {
+  if (request.type === 'builder:execute') {
+    executeWorkflow(request.workflow);
+  }
+});
+```
+
+### System Overview Dashboard
+
+Get comprehensive system status:
+
+```javascript
+const overview = await bridge.getSystemOverview();
+
+console.log({
+  totalAgents: overview.data.totalAgents,
+  runningAgents: overview.data.runningAgents,
+  healthyAgents: overview.data.healthyAgents,
+  pendingTasks: overview.data.pendingTasks
+});
+
+// Display in popup
+displaySystemStatus(overview.data);
+```
+
+### Best Practices
+
+#### 1. Error Handling
+```javascript
+try {
+  const result = await bridge.executeWorkflow(workflowId);
+} catch (error) {
+  if (error.message.includes('unauthorized')) {
+    // Refresh token
+    await refreshAuthToken();
+    // Retry
+    return executeWorkflow(workflowId);
+  }
+  throw error;
+}
+```
+
+#### 2. Resource Cleanup
+```javascript
+// On extension unload
+chrome.runtime.onSuspend.addListener(() => {
+  if (apiBridge) {
+    apiBridge.disconnectWebSocket();
+    apiBridge.dispose();
+  }
+});
+```
+
+#### 3. Offline Handling
+```javascript
+apiBridge.on('ws:disconnected', () => {
+  // Switch to polling mode
+  startPollingMode();
+});
+
+apiBridge.on('ws:connected', () => {
+  // Resume real-time mode
+  stopPollingMode();
+});
+```
+
+#### 4. Rate Limiting
+```javascript
+// API bridge automatically handles rate limiting
+// But you can also implement client-side throttling
+const throttledExecute = throttle(executeWorkflow, 1000);
+```
 
 ## Future Enhancements
 
