@@ -244,8 +244,19 @@ export class EntityStore {
       }
 
       // Add sorting
-      const sortBy = options.sort_by || 'last_seen';
-      const sortOrder = options.sort_order || 'desc';
+      // Whitelist allowed columns and sort directions to prevent SQL injection
+      const allowedSortBy = ['importance', 'access_count', 'last_seen'];
+      const defaultSortBy = 'last_seen';
+      const sortByInput = options.sort_by;
+      const sortBy = allowedSortBy.includes(sortByInput as string)
+        ? sortByInput
+        : defaultSortBy;
+      const allowedSortOrder = ['asc', 'desc'];
+      const defaultSortOrder = 'desc';
+      const sortOrderInput = (options.sort_order || '').toLowerCase();
+      const sortOrder = allowedSortOrder.includes(sortOrderInput)
+        ? sortOrderInput
+        : defaultSortOrder;
       query += ` ORDER BY ${sortBy} ${sortOrder.toUpperCase()}`;
 
       // Add pagination
