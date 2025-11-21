@@ -41,6 +41,7 @@
     {
       "resources": [
         "injected-styles.css",
+        "api-bridge.js",
         "playwright/auto-wait.js",
         "playwright/network.js",
         "playwright/retry.js",
