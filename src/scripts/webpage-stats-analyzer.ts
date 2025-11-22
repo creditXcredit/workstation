@@ -11,10 +11,25 @@
 import { chromium, Browser, Page } from 'playwright';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { promisify } from 'util';
 import { exec as execCallback } from 'child_process';
 
 const exec = promisify(execCallback);
+
+// Configuration constants
+const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'creditXcredit';
+const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME || 'workstation';
+const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}`;
+
+const GHLOC_BASE_URL = 'https://ghloc.vercel.app';
+const GHLOC_FILTERS = '!ini$,!json$,!lock$,!md$,!txt$,!yml$,!yaml$';
+const GHLOC_BRANCH = 'main';
+const GHLOC_URL = `${GHLOC_BASE_URL}/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}?branch=${GHLOC_BRANCH}&filter=${encodeURIComponent(GHLOC_FILTERS)}`;
+
+// Use OS temp directory for cross-platform compatibility
+const TEMP_DIR = os.tmpdir();
+const SCREENSHOT_PATH = path.join(TEMP_DIR, 'ghloc-screenshot.png');
 
 interface GitHubStats {
   stars?: number;
@@ -58,21 +73,20 @@ interface ComparisonReport {
 async function extractGitHubStats(page: Page): Promise<GitHubStats> {
   console.log('📊 Navigating to GitHub repository page...');
   
-  const githubUrl = 'https://github.com/creditXcredit/workstation';
-  await page.goto(githubUrl, { waitUntil: 'networkidle' });
+  await page.goto(GITHUB_REPO_URL, { waitUntil: 'networkidle' });
   
   const stats: GitHubStats = {};
   
   try {
     // Extract star count
-    const starElement = await page.$('a[href="/creditXcredit/workstation/stargazers"] strong, #repo-stars-counter-star');
+    const starElement = await page.$(`a[href="/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/stargazers"] strong, #repo-stars-counter-star`);
     if (starElement) {
       const starText = await starElement.textContent();
       stats.stars = parseInt(starText?.trim() || '0');
     }
     
     // Extract fork count
-    const forkElement = await page.$('a[href="/creditXcredit/workstation/forks"] strong, #repo-network-counter');
+    const forkElement = await page.$(`a[href="/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/forks"] strong, #repo-network-counter`);
     if (forkElement) {
       const forkText = await forkElement.textContent();
       stats.forks = parseInt(forkText?.trim() || '0');
@@ -108,21 +122,20 @@ async function extractGitHubStats(page: Page): Promise<GitHubStats> {
  */
 async function extractGhlocStats(page: Page): Promise<GhlocStats> {
   console.log('📊 Navigating to ghloc stats page...');
-  
-  const ghlocUrl = 'https://ghloc.vercel.app/creditXcredit/workstation?branch=main&filter=%21ini%24%2C%21json%24%2C%21lock%24%2C%21md%24%2C%21txt%24%2C%21yml%24%2C%21yaml%24';
+  console.log(`URL: ${GHLOC_URL}`);
   
   const stats: GhlocStats = {};
   
   try {
-    await page.goto(ghlocUrl, { waitUntil: 'networkidle', timeout: 60000 });
+    await page.goto(GHLOC_URL, { waitUntil: 'networkidle', timeout: 60000 });
     
     // Wait for the page to fully load and render stats
     await page.waitForTimeout(5000);
     
     // Take a screenshot for debugging
     try {
-      await page.screenshot({ path: '/tmp/ghloc-screenshot.png', fullPage: true });
-      console.log('📸 Screenshot saved to /tmp/ghloc-screenshot.png');
+      await page.screenshot({ path: SCREENSHOT_PATH, fullPage: true });
+      console.log(`📸 Screenshot saved to ${SCREENSHOT_PATH}`);
     } catch (e) {
       console.log('Note: Could not save screenshot');
     }
