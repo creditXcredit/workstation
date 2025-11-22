@@ -9,7 +9,6 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@octokit/rest$': '<rootDir>/tests/__mocks__/@octokit/rest.ts',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
