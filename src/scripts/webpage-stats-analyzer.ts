@@ -223,8 +223,19 @@ async function countActualStats(repoPath: string): Promise<ActualStats> {
     stats.jsFiles = jsFilesList.length;
     
     // Count test files
-    const testResult = await exec(`find ${repoPath} -type f \\( -name "*.test.ts" -o -name "*.spec.ts" -o -name "*.test.js" \\) ! -path "*/node_modules/*" 2>/dev/null | wc -l`);
-    stats.testFiles = parseInt(testResult.stdout.trim());
+    const testFindArgs = [
+      `${repoPath}`,
+      '-type', 'f',
+      '(',
+      '-name', '*.test.ts',
+      '-o', '-name', '*.spec.ts',
+      '-o', '-name', '*.test.js',
+      ')',
+      '!', '-path', '*/node_modules/*'
+    ];
+    const testFindResult = await execFile('find', testFindArgs);
+    const testFilesList = testFindResult.stdout.trim() === '' ? [] : testFindResult.stdout.trim().split('\n');
+    stats.testFiles = testFilesList.length;
     
     // Count markdown files
     const mdResult = await exec(`find ${repoPath} -type f -name "*.md" ! -path "*/node_modules/*" 2>/dev/null | wc -l`);
