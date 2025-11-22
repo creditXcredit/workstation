@@ -1,6 +1,17 @@
 #!/bin/bash
 # Repository Statistics Verification Script
-# Usage: npm run stats:verify
+#
+# Usage:
+#   npm run stats:verify
+#   (recommended; works regardless of execute permissions)
+#
+#   OR, to run directly:
+#     chmod +x scripts/verify-stats.sh
+#     ./scripts/verify-stats.sh
+#
+# Platform Requirements:
+#   This script requires a Unix-like environment (Linux, macOS, or WSL/Git Bash on Windows)
+#   as it uses Unix commands like find, wc, and awk.
 
 echo "=== Repository Statistics ==="
 echo ""

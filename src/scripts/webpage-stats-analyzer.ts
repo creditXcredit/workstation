@@ -5,7 +5,15 @@
  * extracts statistics from both, and compares them with actual repository metrics
  * to determine what the webpage stats should actually state.
  * 
+ * **Platform Requirements:**
+ * This script requires a Unix-like environment (Linux, macOS, or WSL/Git Bash on Windows)
+ * for the file counting functionality, as it uses shell commands like `find`, `wc`, and `awk`.
+ * 
  * Usage: ts-node src/scripts/webpage-stats-analyzer.ts
+ * 
+ * Environment Variables:
+ * - GITHUB_REPO_OWNER: Repository owner (default: 'creditXcredit')
+ * - GITHUB_REPO_NAME: Repository name (default: 'workstation')
  */
 
 import { chromium, Browser, Page } from 'playwright';
@@ -239,11 +247,13 @@ async function countActualStats(repoPath: string): Promise<ActualStats> {
     
     // Count markdown files
     const mdResult = await exec(`find ${repoPath} -type f -name "*.md" ! -path "*/node_modules/*" 2>/dev/null | wc -l`);
-    stats.markdownFiles = parseInt(mdResult.stdout.trim());
+    const mdCount = parseInt(mdResult.stdout.trim());
+    stats.markdownFiles = isNaN(mdCount) ? 0 : mdCount;
     
     // Count total files (excluding node_modules, .git, dist)
     const totalResult = await exec(`find ${repoPath} -type f ! -path "*/node_modules/*" ! -path "*/.git/*" ! -path "*/dist/*" 2>/dev/null | wc -l`);
-    stats.totalFiles = parseInt(totalResult.stdout.trim());
+    const totalCount = parseInt(totalResult.stdout.trim());
+    stats.totalFiles = isNaN(totalCount) ? 0 : totalCount;
     
     // Count lines in TypeScript files
     try {
@@ -297,7 +307,7 @@ function compareStats(
   }
   
   // Compare line counts
-  if (ghlocStats.totalLines && actualStats.totalLines) {
+  if (ghlocStats.totalLines && actualStats.totalLines && ghlocStats.totalLines > 0) {
     const difference = Math.abs(ghlocStats.totalLines - actualStats.totalLines);
     const percentDiff = (difference / ghlocStats.totalLines) * 100;
     
