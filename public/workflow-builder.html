@@ -1019,6 +1019,43 @@
                         </div>
                     </div>
 
+                    {/* Quick Downloads Section */}
+                    <div style={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        padding: '16px 20px',
+                        borderRadius: '8px',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                    }}>
+                        <div>
+                            <h3 style={{ margin: '0 0 4px 0', fontSize: '1.1em' }}>📦 Download Workflow Builder</h3>
+                            <p style={{ margin: '0', fontSize: '0.85em', opacity: '0.9' }}>
+                                <span id="workflow-version">Version: Loading...</span> • 
+                                <span id="workflow-size" style={{ marginLeft: '8px' }}>Size: Loading...</span>
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                            <button 
+                                id="download-workflow-btn" 
+                                className="btn btn-primary"
+                                style={{
+                                    background: 'white',
+                                    color: '#764ba2',
+                                    fontWeight: '600',
+                                    border: 'none',
+                                    padding: '8px 16px'
+                                }}
+                                disabled
+                            >
+                                ⬇️ Checking...
+                            </button>
+                            <div id="workflow-download-status" style={{ fontSize: '0.85em', minWidth: '150px' }}></div>
+                        </div>
+                    </div>
+
                     {/* Tab Navigation */}
                     <div className="tab-navigation">
                         <button 
@@ -1136,5 +1173,8 @@
         // Render the app
         ReactDOM.render(<WorkflowBuilder />, document.getElementById('root'));
     </script>
+    
+    <!-- Download handler for package downloads -->
+    <script src="/js/download-handler.js"></script>
 </body>
 </html>

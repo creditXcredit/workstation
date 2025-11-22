@@ -1,0 +1,65 @@
+name: Agent Status Auto-Update
+
+# Run daily at 9:00 PM UTC (as mentioned in documentation)
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run on pushes to main that affect agent code
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/services/agent-orchestrator.ts'
+      - 'src/routes/agents.ts'
+      - 'agents/**'
+
+jobs:
+  update-agent-status:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run agent status updater
+        run: npm run update:agents
+        env:
+          # API_BASE_URL should be set in repository secrets for production
+          # For testing, the script uses mock data so no URL is needed
+          WORKSTATION_API_TOKEN: ${{ secrets.WORKSTATION_API_TOKEN }}
+        continue-on-error: true
+        
+      - name: Check for changes
+        id: git-check
+        run: |
+          git diff --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+          
+      - name: Commit and push if changed
+        if: steps.git-check.outputs.changes == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md ROADMAP_PROGRESS.md
+          git commit -m "chore: auto-update agent status [skip ci]" || exit 0
+          git push
+          
+      - name: Summary
+        run: |
+          if [ "${{ steps.git-check.outputs.changes }}" == "true" ]; then
+            echo "✅ Agent status updated and committed"
+          else
+            echo "ℹ️ No changes detected"
+          fi

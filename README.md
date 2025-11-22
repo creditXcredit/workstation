@@ -63,6 +63,33 @@ npm start
 
 ---
 
+## 📦 Quick Downloads
+
+**Download pre-built packages instantly** - No build required!
+
+| Package | Description | Download |
+|---------|-------------|----------|
+| 🔌 **Chrome Extension** | Browser automation extension (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/chrome-extension.zip) (~72KB) |
+| ⚡ **Workflow Builder** | Visual workflow creation tool (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/workflow-builder.zip) (~14KB) |
+
+### Installation Instructions
+
+**Chrome Extension:**
+1. Download the ZIP file
+2. Extract to a folder
+3. Open `chrome://extensions/` in Chrome
+4. Enable "Developer mode" (top right)
+5. Click "Load unpacked" and select the extracted folder
+
+**Workflow Builder:**
+1. Download the ZIP file
+2. Extract and open `workflow-builder.html` in any browser
+3. Connect to your Workstation server at `http://localhost:3000`
+
+**Alternative:** Build from source using `npm run build:chrome` or `npm run build:workflow`
+
+---
+
 ## 📖 How to Use
 
 **👉 [Read the Simple How-To Guide](HOW_TO_USE.md) 👈**

@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && npm run copy-assets",
+    "build": "tsc && npm run copy-assets && npm run build:chrome && npm run build:workflow",
     "copy-assets": "mkdir -p dist/automation/db && cp src/automation/db/schema.sql dist/automation/db/",
-    "build:chrome": "rm -rf build/chrome-extension && mkdir -p build/chrome-extension && cp -r chrome-extension/* build/chrome-extension/",
+    "build:chrome": "rm -rf build/chrome-extension && mkdir -p build/chrome-extension && cp -r chrome-extension/* build/chrome-extension/ && node scripts/build/zip-chrome-extension.js",
+    "build:workflow": "node scripts/build/zip-workflow-builder.js",
     "test:chrome": "node scripts/test-chrome-extension.js",
     "start": "node dist/index.js",
     "verify": "./scripts/verify-startup.sh",
@@ -58,7 +59,8 @@
     "agent17:test": "cd agents/agent17 && npm test",
     "agent17:generate": "cd agents/agent17 && npm run generate",
     "stats:analyze": "npx ts-node src/scripts/webpage-stats-analyzer.ts",
-    "stats:verify": "./scripts/verify-stats.sh"
+    "stats:verify": "./scripts/verify-stats.sh",
+    "update:agents": "node scripts/update-agent-status.js"
   },
   "overrides": {
     "js-yaml": "^4.1.1"
@@ -110,6 +112,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/uuid": "^9.0.7",
     "@types/ws": "^8.5.10",
+    "archiver": "^7.0.1",
     "axios": "^1.13.2",
     "bcrypt": "^5.1.1",
     "cheerio": "^1.1.2",
