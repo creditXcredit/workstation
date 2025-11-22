@@ -13,10 +13,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { promisify } from 'util';
-import { exec as execCallback } from 'child_process';
+import { exec as execCallback, execFile as execFileCallback } from 'child_process';
 
 const exec = promisify(execCallback);
-
+const execFile = promisify(execFileCallback);
 // Configuration constants
 const GITHUB_REPO_OWNER = process.env.GITHUB_REPO_OWNER || 'creditXcredit';
 const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME || 'workstation';
@@ -227,10 +227,21 @@ async function countActualStats(repoPath: string): Promise<ActualStats> {
     
     // Count lines in TypeScript files
     try {
-      const linesResult = await exec(`find ${repoPath}/src -type f -name "*.ts" -exec wc -l {} + 2>/dev/null | tail -1`);
-      const linesMatch = linesResult.stdout.match(/^\s*(\d+)/);
-      if (linesMatch) {
-        stats.totalLines = parseInt(linesMatch[1]);
+      // Find all .ts files under repoPath/src (non-recursive and safe)
+      const { stdout: findOut } = await execFile('find', [`${repoPath}/src`, '-type', 'f', '-name', '*.ts']);
+      const tsFiles = findOut.split('\n').filter((f) => f.trim().length > 0);
+      let totalLines = 0;
+      for (const filePath of tsFiles) {
+        try {
+          const { stdout: wcOut } = await execFile('wc', ['-l', filePath]);
+          const match = wcOut.match(/^\s*(\d+)/);
+          if (match) {
+            totalLines += parseInt(match[1]);
+          }
+        } catch (wcErr) {
+          // skip files that error
+        }
+      stats.totalLines = totalLines;
       }
     } catch (e) {
       console.log('Note: Could not count total lines');
