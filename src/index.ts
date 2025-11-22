@@ -208,7 +208,7 @@ try {
     
     res.json({ token });
   });
-} catch (error) {
+} catch (_error) {
   // Fallback to memory-based rate limiter if Redis unavailable
   app.post('/auth/token', authLimiter, validateRequest(schemas.generateToken), (req: Request, res: Response) => {
     const { userId, role } = req.body;
@@ -230,7 +230,7 @@ try {
       message: 'Use this token for testing. Add it to Authorization header as: Bearer <token>'
     });
   });
-} catch (error) {
+} catch (_error) {
   // Fallback to memory-based rate limiter if Redis unavailable
   app.get('/auth/demo-token', authLimiter, (req: Request, res: Response) => {
     const token = generateDemoToken();

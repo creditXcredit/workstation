@@ -3,6 +3,9 @@
  * Captures comprehensive system characteristics for intelligent optimization
  */
 
+import { execSync } from 'child_process';
+import * as os from 'os';
+
 export interface CPUInfo {
   model: string;
   cores: number;
@@ -93,8 +96,6 @@ export class MachineFingerprinter {
 
   private async captureMacOSCPU(): Promise<CPUInfo> {
     try {
-      const { execSync } = require('child_process');
-      
       const model = execSync('sysctl -n machdep.cpu.brand_string').toString().trim();
       const cores = parseInt(execSync('sysctl -n hw.physicalcpu').toString().trim());
       const threads = parseInt(execSync('sysctl -n hw.logicalcpu').toString().trim());
@@ -110,7 +111,7 @@ export class MachineFingerprinter {
       if (features.includes('SSE4')) capabilities.push('SSE4');
 
       return { model, cores, threads, architecture: arch, capabilities, frequency: freq };
-    } catch (error) {
+    } catch (_error) {
       return {
         model: 'macOS CPU',
         cores: 8,
@@ -124,8 +125,6 @@ export class MachineFingerprinter {
 
   private async captureLinuxCPU(): Promise<CPUInfo> {
     try {
-      const { execSync } = require('child_process');
-      
       const cpuinfo = execSync('lscpu').toString();
       const model = cpuinfo.match(/Model name:\s+(.+)/)?.[1] || 'Unknown';
       const cores = parseInt(cpuinfo.match(/Core\(s\) per socket:\s+(\d+)/)?.[1] || '4');
@@ -142,7 +141,7 @@ export class MachineFingerprinter {
       if (flags.includes('sse4')) capabilities.push('SSE4');
 
       return { model, cores, threads, architecture: arch, capabilities, frequency: freq };
-    } catch (error) {
+    } catch (_error) {
       return {
         model: 'Linux CPU',
         cores: 4,
@@ -156,8 +155,6 @@ export class MachineFingerprinter {
 
   private async captureWindowsCPU(): Promise<CPUInfo> {
     try {
-      const { execSync } = require('child_process');
-      
       const wmic = execSync('wmic cpu get Name,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed /format:csv').toString();
       const lines = wmic.split('\n').filter((line: string) => line.trim());
       const data = lines[2]?.split(',') || [];
@@ -175,7 +172,7 @@ export class MachineFingerprinter {
         capabilities: ['AVX2', 'SSE4'],
         frequency: freq
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         model: 'Windows CPU',
         cores: 4,
@@ -187,11 +184,8 @@ export class MachineFingerprinter {
     }
   }
 
-  private async captureMemory(platform: string): Promise<MemoryInfo> {
+  private async captureMemory(_platform: string): Promise<MemoryInfo> {
     try {
-      const { execSync } = require('child_process');
-      const os = require('os');
-      
       const total = os.totalmem();
       const available = os.freemem();
 
@@ -201,7 +195,7 @@ export class MachineFingerprinter {
         type: 'DDR4', // Simplified - actual detection requires platform-specific tools
         speed: 3200 // MHz - default estimate
       };
-    } catch (error) {
+    } catch (_error) {
       return {
         total: 16 * 1024 * 1024 * 1024, // 16GB
         available: 8 * 1024 * 1024 * 1024, // 8GB
@@ -213,27 +207,23 @@ export class MachineFingerprinter {
 
   private async captureStorage(platform: string): Promise<StorageInfo> {
     try {
-      const { execSync } = require('child_process');
-      
       let type = 'SSD';
-      let speed = 500; // MB/s
-      let available = 100 * 1024 * 1024 * 1024; // 100GB
-      let total = 500 * 1024 * 1024 * 1024; // 500GB
+      const speed = 500; // MB/s
+      const available = 100 * 1024 * 1024 * 1024; // 100GB
+      const total = 500 * 1024 * 1024 * 1024; // 500GB
 
       if (platform === 'darwin') {
         const diskutil = execSync('diskutil info /').toString();
         if (diskutil.includes('Solid State')) {
           type = diskutil.includes('NVMe') ? 'NVMe' : 'SSD';
-          speed = type === 'NVMe' ? 3000 : 500;
         }
       } else if (platform === 'linux') {
         const lsblk = execSync('lsblk -d -o NAME,ROTA').toString();
         type = lsblk.includes('0') ? 'SSD' : 'HDD';
-        speed = type === 'SSD' ? 500 : 120;
       }
 
       return { type, speed, available, total };
-    } catch (error) {
+    } catch (_error) {
       return {
         type: 'SSD',
         speed: 500,
@@ -243,7 +233,7 @@ export class MachineFingerprinter {
     }
   }
 
-  private async captureNetwork(platform: string): Promise<NetworkInfo> {
+  private async captureNetwork(_platform: string): Promise<NetworkInfo> {
     return {
       bandwidth: 1000, // Mbps - requires actual speed test
       latency: 20, // ms
@@ -252,8 +242,6 @@ export class MachineFingerprinter {
   }
 
   private async captureOS(platform: string): Promise<OSInfo> {
-    const os = require('os');
-    
     return {
       platform,
       type: platform === 'darwin' ? 'macOS' : platform === 'linux' ? 'Linux' : 'Windows',
