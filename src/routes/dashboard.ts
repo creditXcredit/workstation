@@ -8,12 +8,22 @@ import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import rateLimit from 'express-rate-limit';
 
 const router = Router();
 const execAsync = promisify(exec);
+
+// Rate limiter for public endpoints
+const publicStatsLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute
+  message: 'Too many requests to statistics endpoint, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Cache for repository statistics
 interface RepoStatsCache {
@@ -225,8 +235,9 @@ router.get('/analytics', authenticateToken, async (req: AuthenticatedRequest, re
  * Get public repository statistics (no auth required)
  * GET /api/dashboard/repo-stats
  * Returns cached stats with auto-refresh
+ * Rate limited to 30 requests per minute
  */
-router.get('/repo-stats', async (req, res: Response) => {
+router.get('/repo-stats', publicStatsLimiter, async (req, res: Response) => {
   try {
     const now = Date.now();
     
@@ -360,12 +371,20 @@ router.get('/agent-status', async (req, res: Response) => {
   try {
     const agents = [];
     const agentsDir = join(process.cwd(), 'agents');
+    const resolvedAgentsDir = resolve(agentsDir);
 
     try {
       const agentDirs = await fs.readdir(agentsDir, { withFileTypes: true });
       
       for (const dir of agentDirs) {
-        if (dir.isDirectory()) {
+        if (dir.isDirectory() && !dir.isSymbolicLink()) {
+          // Validate that the path is still within agents directory
+          const agentPath = resolve(join(agentsDir, dir.name));
+          if (!agentPath.startsWith(resolvedAgentsDir)) {
+            logger.warn(`Skipping directory outside agents folder: ${dir.name}`);
+            continue;
+          }
+          
           const readmePath = join(agentsDir, dir.name, 'README.md');
           let description = '';
           let status = 'active';
@@ -414,8 +433,9 @@ router.get('/agent-status', async (req, res: Response) => {
 /**
  * Trigger automated deployment
  * POST /api/dashboard/deploy
+ * Requires authentication
  */
-router.post('/deploy', async (req, res: Response) => {
+router.post('/deploy', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { target, environment = 'production' } = req.body;
     
@@ -480,8 +500,9 @@ router.post('/deploy', async (req, res: Response) => {
 /**
  * Check deployment status
  * GET /api/dashboard/deploy/status
+ * Requires authentication
  */
-router.get('/deploy/status', async (req, res: Response) => {
+router.get('/deploy/status', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Check if deployment processes are running
     const { stdout: processes } = await execAsync('ps aux | grep -E "one-click-deploy|npm run build" | grep -v grep || echo ""');

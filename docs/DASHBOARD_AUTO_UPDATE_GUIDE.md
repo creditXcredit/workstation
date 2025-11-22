@@ -64,7 +64,7 @@ The dashboard automatically refreshes data at configurable intervals:
 - Reduced page load times with smart caching
 - Automatic pause when browser tab is inactive (saves resources)
 
-### 2. Self-Healing Auto-Update Bot
+### 3. Self-Healing Auto-Update Bot
 
 The repo-update-agent workflow now includes:
 

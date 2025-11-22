@@ -127,11 +127,13 @@ function updateSystemHealth(stats) {
                       stats.infrastructure.agents > 0 && 
                       stats.infrastructure.workflows > 0;
 
+    const statusDot = healthIndicator.querySelector('.status-dot');
+    
     if (isHealthy) {
-        healthIndicator.innerHTML = '<span class="status-dot status-healthy"></span> System Healthy';
+        healthIndicator.innerHTML = '<span class="status-dot status-healthy" role="status" aria-label="System health: healthy"></span> System Healthy';
         healthIndicator.className = 'health-indicator healthy';
     } else {
-        healthIndicator.innerHTML = '<span class="status-dot status-warning"></span> System Degraded';
+        healthIndicator.innerHTML = '<span class="status-dot status-warning" role="status" aria-label="System health: degraded"></span> System Degraded';
         healthIndicator.className = 'health-indicator warning';
     }
 }
@@ -583,7 +585,8 @@ async function deployDashboard() {
         const response = await fetch(`${API_BASE}/api/dashboard/deploy`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify({
                 target: 'dashboard',
@@ -622,7 +625,8 @@ async function deployChromeExtension() {
         const response = await fetch(`${API_BASE}/api/dashboard/deploy`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify({
                 target: 'chrome',
@@ -665,7 +669,8 @@ async function deployFullStack() {
         const response = await fetch(`${API_BASE}/api/dashboard/deploy`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
             },
             body: JSON.stringify({
                 target: 'full',
@@ -695,7 +700,9 @@ async function deployFullStack() {
 // Check deployment status periodically
 async function checkDeploymentStatus() {
     try {
-        const response = await fetch(`${API_BASE}/api/dashboard/deploy/status`);
+        const response = await fetch(`${API_BASE}/api/dashboard/deploy/status`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
         if (response.ok) {
             const result = await response.json();
             const envEl = document.getElementById('deployment-env');
