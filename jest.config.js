@@ -5,16 +5,28 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.ts', '**/?(*.)+(spec|test).ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(\\@octokit|undici|cheerio|before-after-hook|universal-user-agent)/)',
+    'node_modules/(?!(@octokit|undici|cheerio|before-after-hook|universal-user-agent|simple-git))',
   ],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@octokit/rest$': '<rootDir>/tests/__mocks__/@octokit/rest.ts',
   },
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
-      tsconfig: 'tsconfig.test.json',
-      useESM: false,
+      isolatedModules: true,
+      tsconfig: {
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+        types: ['jest', 'node'],
+        module: 'ESNext',
+        moduleResolution: 'node',
+      },
+    }],
+    '^.+\\.m?js$': ['ts-jest', {
+      tsconfig: {
+        allowJs: true,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
     }],
   },
   extensionsToTreatAsEsm: ['.ts'],
@@ -37,22 +49,22 @@ module.exports = {
   // Enforce coverage thresholds - fail tests if coverage drops
   coverageThreshold: {
     global: {
-      statements: 18,  // Set slightly below current ~20% to allow for minor fluctuations
-      branches: 8,     // Set slightly below current ~10% to allow for minor fluctuations
-      functions: 12,   // Set slightly below current ~14% to allow for minor fluctuations
-      lines: 18,       // Set slightly below current ~20% to allow for minor fluctuations
+      statements: 45,
+      branches: 30,
+      functions: 40,
+      lines: 45,
     },
     // Enforce high coverage for critical components
     './src/auth/**/*.ts': {
-      statements: 60,  // Reduced from 90
-      branches: 55,    // Reduced from 70
-      functions: 75,   // Reduced from 95
-      lines: 60,       // Reduced from 90
+      statements: 90,
+      branches: 72,
+      functions: 95,
+      lines: 90,
     },
     './src/middleware/**/*.ts': {
       statements: 30,
       branches: 0,
-      functions: 20,   // Reduced from 30
+      functions: 30,
       lines: 35,
     },
     './src/utils/env.ts': {
@@ -63,10 +75,10 @@ module.exports = {
     },
     // Automation module thresholds - realistic baselines for current state
     './src/automation/db/**/*.ts': {
-      statements: 40,  // Reduced from 55
-      branches: 0,     // Reduced from 15
-      functions: 0,    // Reduced from 15
-      lines: 40,       // Reduced from 55
+      statements: 55,
+      branches: 15,
+      functions: 15,
+      lines: 55,
     },
     './src/automation/workflow/**/*.ts': {
       statements: 9,
@@ -75,16 +87,16 @@ module.exports = {
       lines: 9,
     },
     './src/automation/orchestrator/**/*.ts': {
-      statements: 0,   // Reduced from 5
+      statements: 5,
       branches: 0,
       functions: 0,
-      lines: 0,        // Reduced from 5
+      lines: 5,
     },
     './src/automation/agents/**/*.ts': {
-      statements: 0,   // Reduced from 4
+      statements: 4,
       branches: 0,
       functions: 0,
-      lines: 0,        // Reduced from 4
+      lines: 4,
     },
     './src/routes/automation.ts': {
       statements: 25,

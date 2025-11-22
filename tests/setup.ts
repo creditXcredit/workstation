@@ -1,6 +1,6 @@
 /**
  * Jest test setup file
- * Mocks external dependencies that cause ESM import issues
+ * Configuration for test environment
  */
 
 /// <reference types="jest" />
@@ -22,23 +22,6 @@ jest.mock('ioredis', () => {
   }));
   mockRedis.prototype.on = jest.fn();
   return mockRedis;
-});
-
-// Mock @octokit/rest to avoid ESM import issues in tests
-jest.mock('@octokit/rest', () => {
-  return {
-    Octokit: jest.fn().mockImplementation(() => ({
-      rest: {
-        pulls: {
-          list: jest.fn().mockResolvedValue({ data: [] }),
-          create: jest.fn().mockResolvedValue({ data: { number: 1 } }),
-        },
-        repos: {
-          get: jest.fn().mockResolvedValue({ data: { default_branch: 'main' } }),
-        },
-      },
-    })),
-  };
 });
 
 // Suppress console logs during tests unless they're errors

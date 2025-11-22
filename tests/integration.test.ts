@@ -1,17 +1,3 @@
-/// <reference types="jest" />
-
-// Mock @octokit/rest before any imports that might use it
-jest.mock('@octokit/rest', () => ({
-  Octokit: jest.fn().mockImplementation(() => ({
-    rest: {
-      pulls: {
-        list: jest.fn().mockResolvedValue({ data: [] }),
-        create: jest.fn().mockResolvedValue({ data: { number: 1 } }),
-      },
-    },
-  })),
-}));
-
 import request from 'supertest';
 import app from '../src/index';
 import { generateDemoToken } from '../src/auth/jwt';
@@ -25,17 +11,18 @@ describe('API Integration Tests', () => {
       expect(response.body).toHaveProperty('status');
       expect(response.body).toHaveProperty('timestamp');
       expect(response.body).toHaveProperty('uptime');
-      // Health endpoint returns metrics.memory, not memory directly
       expect(response.body).toHaveProperty('metrics');
+      expect(response.body.metrics).toHaveProperty('memory');
+      expect(response.body.metrics).toHaveProperty('cpu');
     });
 
     it('should have valid memory metrics', async () => {
       const response = await request(app).get('/health');
       
-      expect(response.body.metrics).toHaveProperty('memory');
+      expect(response.body.metrics.memory).toHaveProperty('rss');
       expect(response.body.metrics.memory).toHaveProperty('heapUsed');
       expect(response.body.metrics.memory).toHaveProperty('heapTotal');
-      expect(response.body.metrics.memory).toHaveProperty('rss');
+      expect(typeof response.body.metrics.memory.rss).toBe('string');
       expect(typeof response.body.metrics.memory.heapUsed).toBe('string');
       expect(typeof response.body.metrics.memory.heapTotal).toBe('string');
     });
