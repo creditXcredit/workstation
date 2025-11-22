@@ -152,7 +152,7 @@ export class AdvancedAutomation {
     return this.networkRequests;
   }
 
-  async interceptRequest(pattern: string, handler: (request: any) => void): Promise<void> {
+  async interceptRequest(pattern: string, _handler: (request: any) => void): Promise<void> {
     console.log(`Intercepting requests matching: ${pattern}`);
   }
 

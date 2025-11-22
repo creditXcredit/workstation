@@ -529,7 +529,7 @@ export class CapabilityMapper {
   /**
    * Check if command is available
    */
-  private async checkCommandAvailable(command: string): Promise<boolean> {
+  private async checkCommandAvailable(_command: string): Promise<boolean> {
     try {
       // Placeholder - would use child_process.exec in actual implementation
       return false;
@@ -541,7 +541,7 @@ export class CapabilityMapper {
   /**
    * Check if service is available
    */
-  private async checkServiceAvailable(url: string): Promise<boolean> {
+  private async checkServiceAvailable(_url: string): Promise<boolean> {
     try {
       // Placeholder - would use fetch/axios in actual implementation
       return false;

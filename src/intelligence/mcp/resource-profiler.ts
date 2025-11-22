@@ -3,6 +3,8 @@
  * Real-time resource monitoring and pattern analysis
  */
 
+import * as os from 'os';
+
 export interface ResourceMetrics {
   timestamp: Date;
   cpu: {
@@ -128,7 +130,7 @@ export class ResourceProfiler {
   private async captureCpuMetrics(): Promise<ResourceMetrics['cpu']> {
     // Platform-specific CPU metrics capture
     // This is a simplified implementation
-    const cpus = require('os').cpus();
+    const cpus = os.cpus();
     
     let totalUser = 0;
     let totalSystem = 0;
@@ -155,7 +157,6 @@ export class ResourceProfiler {
    * Capture memory metrics
    */
   private captureMemoryMetrics(): ResourceMetrics['memory'] {
-    const os = require('os');
     const total = os.totalmem();
     const free = os.freemem();
     const used = total - free;

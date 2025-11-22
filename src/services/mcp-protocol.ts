@@ -3,7 +3,7 @@
  * Handles protocol-level communication between backend and MCP containers
  */
 
-import { getMessageBroker, MCPMessage, TaskMessage, StatusMessage, ResultMessage } from './message-broker';
+import { getMessageBroker, MCPMessage, StatusMessage, ResultMessage } from './message-broker';
 import { agentOrchestrator } from './agent-orchestrator';
 import { advancedAutomation } from './advanced-automation';
 

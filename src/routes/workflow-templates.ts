@@ -9,8 +9,7 @@ import {
   TEMPLATE_CATEGORIES,
   getTemplateById,
   getTemplatesByCategory,
-  searchTemplates,
-  getTemplatesByComplexity
+  searchTemplates
 } from '../workflow-templates';
 import { logger } from '../utils/logger';
 
