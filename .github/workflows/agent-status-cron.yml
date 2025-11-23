@@ -1,4 +1,6 @@
 name: Agent Status Auto-Update
+permissions:
+  contents: write
 
 # Run daily at 9:00 PM UTC (as mentioned in documentation)
 on:
