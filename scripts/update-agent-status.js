@@ -5,7 +5,6 @@
  * Fetches agent status from the API and updates documentation
  */
 
-const fs = require('fs');
 const path = require('path');
 const { injectContent, validateMarkers } = require('./lib/markdown-injector');
 
