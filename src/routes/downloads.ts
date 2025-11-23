@@ -116,6 +116,9 @@ router.get('/workflow-builder.zip', (req: Request, res: Response) => {
       } else {
         // Close the response stream if headers already sent
         res.end();
+      } else {
+        // Close the response stream if headers already sent
+        res.end();
       }
     });
 
