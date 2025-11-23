@@ -69,8 +69,8 @@ npm start
 
 | Package | Description | Download |
 |---------|-------------|----------|
-| 🔌 **Chrome Extension** | Browser automation extension (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/chrome-extension.zip) (~72KB) |
-| ⚡ **Workflow Builder** | Visual workflow creation tool (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/workflow-builder.zip) (~14KB) |
+| 🔌 **Chrome Extension** | Browser automation extension (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/chrome-extension.zip) (~72KB) - *Replace localhost:3000 with your server URL* |
+| ⚡ **Workflow Builder** | Visual workflow creation tool (v1.0.0) | [Download ZIP](http://localhost:3000/downloads/workflow-builder.zip) (~14KB) - *Replace localhost:3000 with your server URL* |
 
 ### Installation Instructions
 

@@ -6,6 +6,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 
 /**
  * Inject content between markers in a markdown file
@@ -37,6 +38,24 @@ function injectContent(filePath, content, startMarker, endMarker, createBackup =
       const backupPath = `${filePath}.backup-${timestamp}`;
       fs.writeFileSync(backupPath, originalContent, 'utf-8');
       console.log(`✓ Backup created: ${backupPath}`);
+
+      // Clean up old backups (keep only last 5)
+      const dir = path.dirname(filePath);
+      const basename = path.basename(filePath);
+      const files = fs.readdirSync(dir);
+      const backupPrefix = basename + '.backup-';
+      const backups = files
+        .filter(f => f.startsWith(backupPrefix))
+        .sort()
+        .reverse();
+      backups.slice(5).forEach(backup => {
+        try {
+          fs.unlinkSync(path.join(dir, backup));
+          console.log(`✓ Cleaned up old backup: ${backup}`);
+        } catch (e) {
+          // Ignore errors during cleanup
+        }
+      });
     }
 
     // Find marker positions

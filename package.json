@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && npm run copy-assets && npm run build:chrome && npm run build:workflow",
+    "build": "tsc && npm run copy-assets",
+    "build:all": "npm run build && npm run build:chrome && npm run build:workflow",
     "copy-assets": "mkdir -p dist/automation/db && cp src/automation/db/schema.sql dist/automation/db/",
     "build:chrome": "rm -rf build/chrome-extension && mkdir -p build/chrome-extension && cp -r chrome-extension/* build/chrome-extension/",
     "build:workflow": "",

@@ -9,11 +9,26 @@ const router = Router();
 const DOWNLOADS_DIR = path.join(__dirname, '../../public/downloads');
 
 /**
+ * Validate that a file path is within the downloads directory
+ * Prevents path traversal attacks
+ */
+function validateFilePath(filePath: string): boolean {
+  const resolvedPath = path.resolve(filePath);
+  const resolvedDir = path.resolve(DOWNLOADS_DIR);
+  return resolvedPath.startsWith(resolvedDir);
+}
+
+/**
  * GET /downloads/chrome-extension.zip
  * Download the Chrome extension package
  */
 router.get('/chrome-extension.zip', (req: Request, res: Response) => {
   const filePath = path.join(DOWNLOADS_DIR, 'chrome-extension.zip');
+
+  // Validate file path is within downloads directory
+  if (!validateFilePath(filePath)) {
+    return res.status(400).json({ error: 'Invalid file path' });
+  }
 
   // Check if file exists
   if (!fs.existsSync(filePath)) {
@@ -64,6 +79,11 @@ router.get('/chrome-extension.zip', (req: Request, res: Response) => {
  */
 router.get('/workflow-builder.zip', (req: Request, res: Response) => {
   const filePath = path.join(DOWNLOADS_DIR, 'workflow-builder.zip');
+
+  // Validate file path is within downloads directory
+  if (!validateFilePath(filePath)) {
+    return res.status(400).json({ error: 'Invalid file path' });
+  }
 
   // Check if file exists
   if (!fs.existsSync(filePath)) {

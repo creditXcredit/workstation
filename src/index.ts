@@ -104,6 +104,15 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Rate limit for download endpoints
+const downloadLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 downloads per windowMs
+  message: 'Too many download requests, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Middleware
 // Security headers with Helmet - relaxed for serving UI
 app.use(helmet({
@@ -278,9 +287,9 @@ app.use('/api/workflow-templates', workflowTemplatesRoutes);
 // Agents management routes
 app.use('/api/agents', agentsRoutes);
 
-// Downloads routes (public access for downloads)
+// Downloads routes (public access for downloads with rate limiting)
 import downloadsRoutes from './routes/downloads';
-app.use('/downloads', downloadsRoutes);
+app.use('/downloads', downloadLimiter, downloadsRoutes);
 
 // MCP routes for GitHub Copilot integration
 app.use('/api/v2', mcpRoutes);
