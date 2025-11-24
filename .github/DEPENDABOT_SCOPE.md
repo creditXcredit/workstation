@@ -122,6 +122,24 @@ npm install package-name@latest
 find . -name "package.json" -not -path "*/node_modules/*" -not -path "./package.json" -execdir npm update \;
 ```
 
+## Verification
+
+To verify the Dependabot configuration is working correctly:
+
+1. **Check GitHub Settings**: Go to `https://github.com/creditXcredit/workstation/settings/security_analysis`
+   - Dependabot should show as enabled
+   - Only 1 package ecosystem should be monitored (npm at /)
+
+2. **Monitor PRs**: After this change, Dependabot should only create PRs for:
+   - Dependencies in the root `package.json`
+   - GitHub Actions in `.github/workflows/`
+
+3. **What to Watch For**:
+   - ✓ PRs with title like: "chore(deps): bump axios from 1.6.0 to 1.6.1"
+   - ✗ PRs mentioning subdirectories like: "chore(deps): bump axios in /agents/agent17"
+
+If you see PRs for subdirectories, the configuration needs to be reviewed.
+
 ## Configuration File
 See `.github/dependabot.yml` for the actual configuration.
 
