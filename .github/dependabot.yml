@@ -37,7 +37,7 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    # Ignore major version bumps (require manual review)
+    # Skip major version bumps (no PRs created)
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
