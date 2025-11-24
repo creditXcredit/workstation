@@ -46,7 +46,6 @@ updates:
     allow:
       - dependency-type: "production"
     # Ignore ALL major updates (breaking changes)
-    # Skip major version bumps (no PRs created)
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
