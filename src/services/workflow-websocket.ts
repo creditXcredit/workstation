@@ -183,12 +183,25 @@ class WorkflowWebSocketServer {
         return;
       }
 
+      // Calculate progress from tasks if available
+      let progress = 0;
+      try {
+        const tasks = await orchestrationEngine.getExecutionTasks(executionId);
+        if (tasks && Array.isArray(tasks)) {
+          const completed = tasks.filter((t: any) => t.status === 'completed').length;
+          progress = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : 0;
+        }
+      } catch (error) {
+        // If tasks query fails, leave progress at 0
+        logger.warn('Failed to calculate progress from tasks', { executionId, error });
+      }
+
       const status = {
         type: 'execution_update',
         executionId,
         data: {
           status: execution.status,
-          progress: 0, // Calculate from tasks
+          progress,
           startedAt: execution.started_at,
           completedAt: execution.completed_at,
           error: execution.error_message,

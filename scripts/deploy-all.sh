@@ -272,9 +272,9 @@ MIT License - See LICENSE file for details
 
 ---
 
-**Installation Date:** $(date)
+**Installation Date:** \$(date)
 **Version:** v${VERSION}
-**Platform:** $(uname -s) $(uname -m)
+**Platform:** \$(uname -s) \$(uname -m)
 EOF
 
 # Step 6: Create quick reference card

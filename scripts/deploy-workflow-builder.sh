@@ -167,11 +167,24 @@ echo -e "${YELLOW}📋 Updating downloads manifest...${NC}"
 node -e "
 const fs = require('fs');
 
-let manifest = { version: '$VERSION', generated: new Date().toISOString(), files: [] };
-try {
-  manifest = JSON.parse(fs.readFileSync('$DIST_DIR/manifest.json', 'utf8'));
-} catch (e) {
-  // File doesn't exist yet
+// Read existing manifest or create new one
+let manifest = { 
+  version: '$VERSION', 
+  generated: new Date().toISOString(), 
+  files: [] 
+};
+
+const manifestPath = '$DIST_DIR/manifest.json';
+if (fs.existsSync(manifestPath)) {
+  try {
+    const existing = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    // Preserve existing structure and update version/generated
+    manifest.version = '$VERSION';
+    manifest.generated = new Date().toISOString();
+    manifest.files = existing.files || [];
+  } catch (e) {
+    console.warn('Could not parse existing manifest, creating new one');
+  }
 }
 
 // Add or update workflow builder entry
@@ -192,7 +205,7 @@ if (existingIndex >= 0) {
   manifest.files.push(builderEntry);
 }
 
-fs.writeFileSync('$DIST_DIR/manifest.json', JSON.stringify(manifest, null, 2));
+fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
 "
 
 # Step 7: Display summary
