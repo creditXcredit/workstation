@@ -168,7 +168,7 @@ describe('Automation Routes', () => {
     });
 
     it('should reject request with invalid token', async () => {
-      const response = await request(app)
+      await request(app)
         .post('/api/v2/workflows')
         .set('Authorization', 'Bearer invalid-token')
         .send({
