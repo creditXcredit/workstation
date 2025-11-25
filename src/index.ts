@@ -44,6 +44,7 @@ import authRoutes from './routes/auth';
 import dashboardRoutes from './routes/dashboard';
 import workflowsRoutes from './routes/workflows';
 import workflowTemplatesRoutes from './routes/workflow-templates';
+import workflowRoutes from './routes/workflow-routes';
 import agentsRoutes from './routes/agents';
 import downloadsRoutes from './routes/downloads';
 import backupsRoutes from './routes/backups';
@@ -283,6 +284,9 @@ app.use('/api/workflows', workflowsRoutes);
 
 // Workflow templates routes
 app.use('/api/workflow-templates', workflowTemplatesRoutes);
+
+// Workflow execution and template routes (v2.0)
+app.use('/api/v2', workflowRoutes);
 
 // Agents management routes
 app.use('/api/agents', agentsRoutes);
