@@ -106,7 +106,7 @@ export class Validator {
       
       // Remove dangerous attributes
       sanitized = sanitized.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
-      sanitized = sanitized.replace(/javascript:/gi, '');
+      sanitized = sanitized.replace(/(?:javascript:|data:|vbscript:)/gi, '');
     }
 
     return sanitized.trim();
