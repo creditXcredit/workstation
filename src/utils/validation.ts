@@ -77,11 +77,18 @@ export class Validator {
       return '';
     }
 
-    return input
-      .replace(/[<>]/g, '') // Remove angle brackets
-      .replace(/javascript:/gi, '') // Remove javascript: protocol
-      .replace(/on\w+=/gi, '') // Remove event handlers
-      .trim();
+    // Remove angle brackets, javascript: protocol, and repeatedly remove event handlers
+    let sanitized = input.replace(/[<>]/g, '') // Remove angle brackets
+      .replace(/javascript:/gi, ''); // Remove javascript: protocol
+
+    // Remove all event handler attributes with repeated replacement
+    let previous;
+    do {
+      previous = sanitized;
+      sanitized = sanitized.replace(/on\w+=/gi, '');
+    } while (sanitized !== previous);
+
+    return sanitized.trim();
   }
 
   /**
