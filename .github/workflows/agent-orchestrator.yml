@@ -38,7 +38,7 @@ jobs:
       
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Analyze and classify requirements
         id: classify
@@ -124,7 +124,7 @@ jobs:
       
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Wait for discovery (simulated)
         run: |
@@ -161,7 +161,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Create project structure (simulated)
         run: |
@@ -210,7 +210,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Create configuration files
         run: |
@@ -249,7 +249,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       
       - name: Generate README
         run: |

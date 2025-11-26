@@ -34,7 +34,7 @@ jobs:
       deployments: write
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Create deployment
         uses: chrnorm/deployment-action@v2
@@ -110,7 +110,7 @@ jobs:
       packages: read
     
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Rollback single agent
         if: github.event.inputs.agent != 'all'

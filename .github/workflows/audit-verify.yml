@@ -65,7 +65,7 @@ jobs:
     
     steps:
       - name: Checkout fixes branch
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch_name || github.event.workflow_run.head_branch || 'main' }}
       
@@ -162,7 +162,7 @@ jobs:
     
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
       
