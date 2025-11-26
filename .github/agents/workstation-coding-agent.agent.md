@@ -1,9 +1,198 @@
 ---
 name: Workstation Repository Coding Agent
+version: 2.0.0
 description: Specialized coding agent tailored for the creditXcredit/workstation repository with task analysis, code implementation, and systematic assessment capabilities
+enterprise_ready: true
 ---
 
 # Workstation Repository Coding Agent
+
+## Error Handling & Guardrails Configuration
+
+### Error Classification
+```yaml
+error_handling:
+  severity_levels:
+    critical:
+      - build_failure_introduced
+      - breaking_api_changes
+      - security_vulnerability_added
+      - data_corruption_risk
+    high:
+      - test_coverage_decreased
+      - linting_errors_introduced
+      - dependency_conflicts
+      - authentication_bypass
+    medium:
+      - code_quality_degradation
+      - performance_regression
+      - missing_documentation
+      - incomplete_implementation
+    low:
+      - style_inconsistencies
+      - minor_refactoring_needed
+      - todo_items_added
+      
+  retry_policy:
+    max_attempts: 2  # Code changes should be intentional, fewer retries
+    initial_delay_ms: 1000
+    backoff_multiplier: 1.5
+    max_delay_ms: 5000
+    retryable_errors:
+      - git_lock_failure
+      - temporary_file_conflict
+      - network_timeout
+      
+  timeouts:
+    code_generation_ms: 120000   # 2 minutes
+    test_execution_ms: 300000    # 5 minutes
+    build_verification_ms: 180000 # 3 minutes
+    analysis_ms: 60000           # 1 minute
+    
+  circuit_breaker:
+    failure_threshold: 3
+    success_threshold: 2
+    timeout_ms: 180000
+    half_open_requests: 1
+    
+  recovery:
+    auto_rollback: true
+    create_backup_branch: true
+    preserve_git_history: true
+    notify_on_failure: true
+    fallback_behavior: "create_pr_for_review"
+```
+
+### Input Validation
+```yaml
+validation:
+  task_request:
+    required_fields:
+      - task_description
+      - target_files
+    optional_fields:
+      - priority
+      - deadline
+      - dependencies
+      
+  sanitization:
+    file_paths:
+      - validate_within_repo
+      - no_path_traversal
+      - check_write_permissions
+    code_content:
+      - validate_syntax
+      - check_for_secrets
+      - scan_for_malware
+      
+  rate_limits:
+    tasks_per_hour: 30
+    concurrent_tasks: 3
+    max_files_modified: 20
+    
+  resource_limits:
+    max_memory_mb: 2048
+    max_cpu_percent: 80
+    max_execution_time_ms: 600000
+    max_code_size_kb: 1024
+```
+
+### Health Checks
+```yaml
+health_checks:
+  liveness:
+    endpoint: "/health/coding-agent/live"
+    interval_seconds: 60
+    timeout_seconds: 5
+    failure_threshold: 3
+    
+  readiness:
+    endpoint: "/health/coding-agent/ready"
+    interval_seconds: 30
+    timeout_seconds: 5
+    failure_threshold: 2
+    checks:
+      - git_repository_accessible
+      - build_tools_available
+      - test_framework_ready
+      - linter_operational
+      
+  custom_checks:
+    - name: "typescript_compiler"
+      critical: true
+      timeout_ms: 3000
+    - name: "jest_test_runner"
+      critical: true
+      timeout_ms: 3000
+    - name: "eslint_linter"
+      critical: false
+      timeout_ms: 2000
+```
+
+### Monitoring & Metrics
+```yaml
+monitoring:
+  metrics:
+    performance:
+      - task_completion_time
+      - code_generation_speed
+      - test_pass_rate
+      - build_success_rate
+      - review_approval_rate
+    resources:
+      - memory_usage_peak
+      - files_modified_count
+      - lines_of_code_added
+      - lines_of_code_removed
+    business:
+      - tasks_completed
+      - bugs_fixed
+      - features_implemented
+      - technical_debt_reduced
+      
+  logging:
+    level: "info"
+    format: "json"
+    include_git_context: true
+    sanitize_code_snippets: false
+    retention_days: 90
+    
+  alerts:
+    - condition: "build_success_rate < 90%"
+      severity: "high"
+      notification: ["slack", "email"]
+    - condition: "test_pass_rate < 95%"
+      severity: "high"
+      notification: ["slack"]
+    - condition: "task_completion_time > 10min"
+      severity: "medium"
+      notification: ["slack"]
+```
+
+### Security Configuration
+```yaml
+security:
+  authentication:
+    required: true
+    methods: ["github_token", "jwt"]
+    
+  authorization:
+    required_permissions:
+      - "repo:write"
+      - "pr:create"
+      - "workflow:execute"
+    
+  code_security:
+    scan_for_secrets: true
+    validate_dependencies: true
+    prevent_code_injection: true
+    check_security_patterns: true
+    
+  secrets:
+    never_commit_secrets: true
+    use_environment_vars: true
+    rotate_tokens_days: 30
+```
 
 ## Overview
 This is a specialized GitHub Copilot Coding Agent designed exclusively for the creditXcredit/workstation repository. It excels at:

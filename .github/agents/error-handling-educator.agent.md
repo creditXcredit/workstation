@@ -1,10 +1,201 @@
+---
+name: Error Handling Educator Agent
+version: 2.0.0
+description: Analyze CI/CD scans, identify error patterns, educate on proper error handling, and recommend fixes
+enterprise_ready: true
+---
+
 # Error Handling Educator Agent
 
 ## Agent Identity
 - **Name**: Error Handling Educator
-- **Version**: 1.0.0
+- **Version**: 2.0.0
 - **Purpose**: Analyze CI/CD scans, identify error patterns, educate on proper error handling, and recommend fixes
 - **Expertise**: Error analysis, CI/CD troubleshooting, enterprise error handling patterns, security best practices
+
+## Error Handling & Guardrails Configuration
+
+### Error Classification
+```yaml
+error_handling:
+  severity_levels:
+    critical:
+      - workflow_failure
+      - security_scan_failure
+      - data_loss_in_analysis
+      - infinite_loop_detection
+    high:
+      - pattern_detection_failure
+      - recommendation_generation_failure
+      - integration_api_timeout
+      - memory_exhaustion
+    medium:
+      - incomplete_scan_results
+      - missing_error_context
+      - visualization_rendering_error
+      - report_generation_delay
+    low:
+      - minor_formatting_issues
+      - warning_classification_mismatch
+      - non-critical_metrics_missing
+      
+  retry_policy:
+    max_attempts: 3
+    initial_delay_ms: 1000
+    backoff_multiplier: 2
+    max_delay_ms: 15000
+    retryable_errors:
+      - github_api_rate_limit
+      - workflow_run_not_found
+      - log_fetch_timeout
+      - temporary_network_error
+      
+  timeouts:
+    scan_analysis_ms: 300000      # 5 minutes
+    log_download_ms: 60000        # 1 minute  
+    pattern_detection_ms: 120000  # 2 minutes
+    report_generation_ms: 180000  # 3 minutes
+    
+  circuit_breaker:
+    failure_threshold: 3
+    success_threshold: 2
+    timeout_ms: 180000
+    half_open_requests: 1
+    
+  recovery:
+    auto_rollback: false  # Education agent doesn't modify code
+    preserve_analysis_state: true
+    cache_scan_results: true
+    notify_on_failure: true
+    fallback_behavior: "basic_error_list"
+```
+
+### Input Validation
+```yaml
+validation:
+  scan_request:
+    required_fields:
+      - repository
+      - workflow_run_id
+    optional_fields:
+      - severity_filter
+      - error_category_filter
+      - include_resolved
+      
+  sanitization:
+    repository_names:
+      - validate_github_format
+      - no_special_chars
+    workflow_ids:
+      - numeric_only
+      - positive_integer
+      
+  rate_limits:
+    analyses_per_hour: 20
+    concurrent_scans: 2
+    max_workflow_runs: 100
+    
+  resource_limits:
+    max_memory_mb: 1024
+    max_cpu_percent: 60
+    max_execution_time_ms: 300000
+    max_log_size_mb: 50
+```
+
+### Health Checks
+```yaml
+health_checks:
+  liveness:
+    endpoint: "/health/error-educator/live"
+    interval_seconds: 60
+    timeout_seconds: 5
+    failure_threshold: 3
+    
+  readiness:
+    endpoint: "/health/error-educator/ready"
+    interval_seconds: 30
+    timeout_seconds: 5
+    failure_threshold: 2
+    checks:
+      - github_api_accessible
+      - pattern_database_loaded
+      - analysis_engine_ready
+      
+  custom_checks:
+    - name: "github_api_rate_limit"
+      critical: true
+      timeout_ms: 3000
+    - name: "error_pattern_database"
+      critical: true
+      timeout_ms: 2000
+    - name: "visualization_engine"
+      critical: false
+      timeout_ms: 5000
+```
+
+### Monitoring & Metrics
+```yaml
+monitoring:
+  metrics:
+    performance:
+      - analysis_duration
+      - errors_identified_count
+      - patterns_detected_count
+      - recommendations_generated
+      - accuracy_score
+    resources:
+      - memory_usage_peak
+      - api_calls_made
+      - log_bytes_processed
+    business:
+      - scans_completed
+      - critical_errors_found
+      - teams_educated
+      - resolution_rate
+      
+  logging:
+    level: "info"
+    format: "json"
+    include_error_traces: true
+    sanitize_tokens: true
+    retention_days: 60
+    
+  alerts:
+    - condition: "critical_errors_found > 5"
+      severity: "high"
+      notification: ["slack", "email"]
+    - condition: "analysis_duration > 5min"
+      severity: "medium"
+      notification: ["slack"]
+    - condition: "accuracy_score < 70%"
+      severity: "high"
+      notification: ["email"]
+```
+
+### Security Configuration
+```yaml
+security:
+  authentication:
+    required: true
+    methods: ["github_token"]
+    token_permissions: ["repo:read", "actions:read"]
+    
+  authorization:
+    required_scopes:
+      - "workflow:read"
+      - "logs:read"
+    
+  sanitization:
+    enabled: true
+    redact_secrets: true
+    mask_tokens: true
+    remove_pii: true
+    
+  data_protection:
+    encrypt_stored_results: true
+    secure_log_transmission: true
+    never_log_secrets: true
+```
 
 ## Agent Capabilities
 
@@ -583,3 +774,192 @@ To use this agent in your repository:
 ---
 
 *This agent learns and improves with each use. Share patterns and enhancements back to the community.*
+
+## Operational Runbook
+
+### Common Analysis Scenarios & Solutions
+
+#### Scenario: GitHub API Rate Limit Exceeded
+**Symptoms**: "API rate limit exceeded" errors, incomplete scan results
+**Resolution**:
+1. Check current rate limit: `curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/rate_limit`
+2. Wait for reset time or use different authentication token
+3. Enable caching to reduce API calls
+4. Implement request batching where possible
+**Prevention**: Monitor rate limit proactively, use conditional requests, cache aggressively
+
+#### Scenario: Workflow Run Not Found
+**Symptoms**: 404 errors when fetching workflow run details
+**Resolution**:
+1. Verify run ID is correct
+2. Check if run was deleted or expired
+3. Verify repository access permissions
+4. Use search API to find recent runs
+**Prevention**: Validate run IDs before analysis, handle 404s gracefully
+
+#### Scenario: Log Download Timeout
+**Symptoms**: Analysis hangs when downloading large workflow logs
+**Resolution**:
+1. Increase timeout values in configuration
+2. Download logs in chunks if supported
+3. Skip extremely large log files (>100MB)
+4. Use streaming processing instead of loading entire log
+**Prevention**: Set reasonable timeout limits, implement streaming log processing
+
+#### Scenario: Pattern Detection Failure
+**Symptoms**: Agent fails to identify known error patterns
+**Resolution**:
+1. Update pattern database with new error signatures
+2. Review log format changes from GitHub Actions
+3. Check regex patterns for compatibility
+4. Enable debug logging to see matching attempts
+**Prevention**: Regularly update pattern database, version pattern definitions
+
+#### Scenario: Memory Exhaustion During Analysis
+**Symptoms**: Out of memory errors, process crashes
+**Resolution**:
+1. Reduce concurrent scan limit
+2. Process logs in streaming mode
+3. Clear caches periodically
+4. Increase memory allocation if needed
+**Prevention**: Monitor memory usage, implement memory limits per scan
+
+#### Scenario: Incomplete Error Context
+**Symptoms**: Recommendations lack sufficient detail
+**Resolution**:
+1. Fetch additional context from related workflow steps
+2. Review full log file instead of summary
+3. Check for truncated error messages
+4. Correlate with repository code changes
+**Prevention**: Always fetch full context, link to commit history
+
+### Troubleshooting Commands
+
+```bash
+# Check agent health
+curl http://localhost:3000/health/error-educator/ready
+
+# Run analysis on specific workflow run
+npm run analyze:workflow -- --run-id=12345
+
+# List recent analyses
+npm run analyze:list
+
+# View cached patterns
+npm run analyze:patterns
+
+# Clear analysis cache
+npm run analyze:clear-cache
+
+# Test pattern matching
+npm run analyze:test-pattern -- "error message"
+
+# Generate analysis report
+npm run analyze:report -- --run-id=12345 --format=json
+
+# Validate GitHub token permissions
+gh api rate_limit
+
+# Debug mode analysis
+DEBUG=error-educator:* npm run analyze:workflow -- --run-id=12345
+```
+
+### Monitoring Dashboard Metrics
+
+**Key Performance Indicators**:
+- Analysis completion rate: Target > 95%
+- Pattern detection accuracy: Target > 85%
+- Average analysis time: Target < 2 minutes
+- API calls per analysis: Monitor for optimization
+- Cache hit rate: Target > 70%
+
+**Alert Thresholds**:
+- Critical: Analysis failures > 10% of runs
+- High: Pattern detection < 70% accuracy
+- Medium: Analysis time > 5 minutes
+- Low: Cache hit rate < 50%
+
+### Maintenance Procedures
+
+**Daily**:
+- Review failed analyses
+- Check API rate limit usage
+- Monitor memory usage trends
+- Validate new error patterns
+
+**Weekly**:
+- Update error pattern database
+- Review analysis accuracy metrics
+- Clean old cached results
+- Update documentation with new patterns
+
+**Monthly**:
+- Audit pattern matching accuracy
+- Review and optimize performance
+- Update GitHub Actions compatibility
+- Conduct disaster recovery test
+
+### Testing Checklist
+
+Before deploying updates:
+- [ ] Run analysis on known error workflows
+- [ ] Verify pattern matching accuracy
+- [ ] Test API rate limit handling
+- [ ] Validate memory usage under load
+- [ ] Check report generation quality
+- [ ] Test with various error types
+- [ ] Verify caching mechanisms
+- [ ] Test timeout handling
+
+### Escalation Procedures
+
+**Level 1** - Automated Recovery (0-5 minutes)
+- Retry failed API calls
+- Use cached results if available
+- Switch to basic analysis mode
+
+**Level 2** - Team Review (5-30 minutes)
+- Manual pattern verification
+- API token rotation if needed
+- Performance optimization review
+
+**Level 3** - Expert Analysis (30+ minutes)
+- Deep dive into analysis failures
+- Pattern database updates
+- Architecture review
+
+### Emergency Procedures
+
+**Emergency Disable**:
+```bash
+# Disable error educator agent
+gh workflow disable error-educator.yml
+
+# Clear any stuck analyses
+redis-cli DEL "analysis:*"
+
+# Notify team
+echo "Error educator disabled" | slack-notify
+```
+
+**Recovery Steps**:
+```bash
+# Clear caches
+npm run analyze:clear-cache
+
+# Verify GitHub API access
+gh auth status
+
+# Test with simple workflow
+npm run analyze:test
+
+# Re-enable agent
+gh workflow enable error-educator.yml
+```
+
+### Support Contacts
+
+- **Primary**: DevOps Team - devops@example.com
+- **Secondary**: Engineering Team - engineering@example.com
+- **Escalation**: Engineering Manager - manager@example.com
+- **Pattern Updates**: ML Team - ml@example.com
