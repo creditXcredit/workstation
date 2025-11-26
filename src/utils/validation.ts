@@ -141,11 +141,11 @@ export class Validator {
   }
 
   /**
-   * Validate email address
+   * Validate email address using Joi for RFC 5322 compliance
    */
   static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const { error } = Joi.string().email().validate(email);
+    return !error;
   }
 
   /**
