@@ -141,11 +141,11 @@ export class Validator {
   }
 
   /**
-   * Validate email address
+   * Validate email address using Joi for RFC 5322 compliance
    */
   static isValidEmail(email: string): boolean {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
+    const { error } = Joi.string().email({ tlds: { allow: false } }).validate(email);
+    return !error;
   }
 
   /**
@@ -339,11 +339,11 @@ export function sanitizeRequest(req: Request, _res: Response, next: NextFunction
   }
   
   if (req.query) {
-    req.query = Validator.sanitizeObject(req.query);
+    Object.assign(req.query, Validator.sanitizeObject(req.query));
   }
   
   if (req.params) {
-    req.params = Validator.sanitizeObject(req.params);
+    Object.assign(req.params, Validator.sanitizeObject(req.params));
   }
   
   next();

@@ -117,3 +117,4 @@ agent-server/nodejs/logs/*.log
 workstation-extension-*.zip
 deployment-report-*.md
 deploy-*.log
+*.broken

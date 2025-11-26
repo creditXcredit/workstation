@@ -75,17 +75,22 @@ export class HealthCheckManager {
       const startTime = Date.now();
       try {
         const timeout = check.timeout || 5000;
-        let timeoutId: NodeJS.Timeout;
+        let timeoutId: NodeJS.Timeout | undefined;
         
         const result = await Promise.race([
-          check.check(),
+          check.check().then((res) => {
+            clearTimeout(timeoutId);
+            return res;
+          }),
           new Promise<{ healthy: boolean; message: string }>((_, reject) => {
             timeoutId = setTimeout(() => reject(new Error('Health check timeout')), timeout);
           })
         ]);
 
-        // Clear timeout to prevent memory leak
-        clearTimeout(timeoutId!);
+        // Clear timeout to prevent memory leak (redundant but safe)
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
 
         const responseTime = Date.now() - startTime;
         const status = result.healthy ? HealthStatus.HEALTHY : HealthStatus.UNHEALTHY;
