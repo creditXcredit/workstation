@@ -10,6 +10,7 @@
 import Joi from 'joi';
 import { ErrorHandler } from './error-handler';
 import { Request, Response, NextFunction } from 'express';
+import sanitizeHtmlLib from 'sanitize-html';
 
 /**
  * Validation result interface
@@ -84,6 +85,18 @@ export class Validator {
       .replace(/vbscript:/gi, '') // Remove vbscript: protocol
       .replace(/on\w+=/gi, '') // Remove event handlers
       .trim();
+    // Remove angle brackets, javascript: protocol, and repeatedly remove event handlers
+    let sanitized = input.replace(/[<>]/g, '') // Remove angle brackets
+      .replace(/javascript:/gi, ''); // Remove javascript: protocol
+
+    // Remove all event handler attributes with repeated replacement
+    let previous;
+    do {
+      previous = sanitized;
+      sanitized = sanitized.replace(/on\w+=/gi, '');
+    } while (sanitized !== previous);
+
+    return sanitized.trim();
   }
 
   /**
@@ -123,6 +136,16 @@ export class Validator {
       sanitized = sanitized.replace(/(?:javascript:|data:|vbscript:)/gi, '');
     }
 
+    // Use sanitize-html library for robust sanitization
+    // Build config
+    const config: sanitizeHtmlLib.IOptions = {
+      allowedTags: allowedTags.length > 0 ? allowedTags : [],
+      allowedAttributes: {}, // No attributes allowed by default
+      // Don't allow script, iframe, or dangerous protocols
+      allowVulnerableTags: false,
+      allowedSchemes: ['http', 'https', 'mailto'],
+    };
+    const sanitized = sanitizeHtmlLib(input, config);
     return sanitized.trim();
   }
 
@@ -149,6 +172,11 @@ export class Validator {
   static isValidEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+   * Validate email address using Joi for RFC 5322 compliance
+   */
+  static isValidEmail(email: string): boolean {
+    const { error } = Joi.string().email().validate(email);
+    return !error;
   }
 
   /**
@@ -347,6 +375,11 @@ export function sanitizeRequest(req: Request, _res: Response, next: NextFunction
   
   if (req.params) {
     req.params = Validator.sanitizeObject(req.params);
+    Object.assign(req.query, Validator.sanitizeObject(req.query));
+  }
+  
+  if (req.params) {
+    Object.assign(req.params, Validator.sanitizeObject(req.params));
   }
   
   next();

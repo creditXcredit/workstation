@@ -292,6 +292,9 @@ export class ErrorHandler {
       }
     }
 
+    if (!lastError) {
+      throw new AppError('Operation failed after retries', 'UNKNOWN_ERROR');
+    }
     throw lastError;
   }
 
