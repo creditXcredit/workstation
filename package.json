@@ -69,7 +69,8 @@
     "stats:verify": "./scripts/verify-stats.sh"
   },
   "overrides": {
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "semver": "^7.6.0"
   },
   "keywords": [
     "browser",
@@ -131,11 +132,12 @@
     "d3": "^7.9.0",
     "dockerode": "^4.0.2",
     "dotenv": "^16.3.1",
+    "exceljs": "^4.4.0",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
     "googleapis": "^166.0.0",
     "helmet": "^8.1.0",
-    "imap-simple": "^5.1.0",
+    "imap-simple": "^1.6.3",
     "ioredis": "^5.3.2",
     "joi": "^17.11.0",
     "jsonwebtoken": "^9.0.2",
@@ -161,7 +163,6 @@
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "ws": "^8.16.0",
-    "xlsx": "^0.18.5",
     "zod": "^4.1.13"
   },
   "devDependencies": {

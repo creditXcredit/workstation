@@ -2,10 +2,27 @@
  * Excel Agent for workflow automation
  * Handles Excel file reading, writing, multi-sheet operations, and cell formatting
  * Phase 1: Data Agents
+ * Security: Migrated from xlsx to exceljs (resolved GHSA-4r6h-8v6p-xvw6, GHSA-5pgg-2g8v-p4x9)
  */
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 import { logger } from '../../../utils/logger';
+
+/**
+ * Helper to convert Buffer to ArrayBuffer for ExcelJS
+ */
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+  // Ensure we return an ArrayBuffer, not SharedArrayBuffer
+  if (arrayBuffer instanceof ArrayBuffer) {
+    return arrayBuffer;
+  }
+  // Fallback: create a new ArrayBuffer
+  const newBuffer = new ArrayBuffer(buffer.length);
+  const view = new Uint8Array(newBuffer);
+  view.set(buffer);
+  return newBuffer;
+}
 
 export interface ExcelReadOptions {
   sheetName?: string;
@@ -55,43 +72,68 @@ export class ExcelAgent {
     error?: string;
   }> {
     try {
+      const workbook = new ExcelJS.Workbook();
+      
       // Read workbook from buffer or file path
-      const workbook = typeof params.input === 'string'
-        ? XLSX.readFile(params.input)
-        : XLSX.read(params.input, { type: 'buffer' });
+      if (typeof params.input === 'string') {
+        await workbook.xlsx.readFile(params.input);
+      } else {
+        await workbook.xlsx.load(bufferToArrayBuffer(params.input));
+      }
 
       const options = params.options || {};
       
       // Determine which sheet to read
+      let worksheet: ExcelJS.Worksheet | undefined;
       let sheetName: string;
+      
       if (options.sheetName) {
+        worksheet = workbook.getWorksheet(options.sheetName);
         sheetName = options.sheetName;
       } else if (options.sheetIndex !== undefined) {
-        sheetName = workbook.SheetNames[options.sheetIndex];
+        worksheet = workbook.getWorksheet(options.sheetIndex + 1); // ExcelJS is 1-indexed
+        sheetName = worksheet?.name || '';
       } else {
         // Default to first sheet
-        sheetName = workbook.SheetNames[0];
+        worksheet = workbook.worksheets[0];
+        sheetName = worksheet?.name || '';
       }
 
-      if (!sheetName || !workbook.Sheets[sheetName]) {
-        throw new Error(`Sheet not found: ${sheetName || 'index ' + options.sheetIndex}`);
+      if (!worksheet) {
+        throw new Error(`Sheet not found: ${options.sheetName || 'index ' + options.sheetIndex}`);
       }
 
-      const worksheet = workbook.Sheets[sheetName];
-
-      // Convert sheet to JSON with options
-      const data = XLSX.utils.sheet_to_json(worksheet, {
-        raw: options.raw ?? false,
-        defval: options.defval,
-        range: options.range
+      // Convert sheet to JSON array
+      const data: unknown[] = [];
+      const headers: string[] = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // First row is headers
+          row.eachCell((cell) => {
+            headers.push(String(cell.value || ''));
+          });
+        } else {
+          // Data rows
+          const rowData: Record<string, unknown> = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header) {
+              rowData[header] = options.raw ? cell.value : String(cell.value || options.defval || '');
+            }
+          });
+          data.push(rowData);
+        }
       });
+
+      const sheets = workbook.worksheets.map(ws => ws.name);
 
       logger.info(`Excel file read successfully: ${data.length} rows from sheet '${sheetName}'`);
 
       return {
         success: true,
         data,
-        sheets: workbook.SheetNames,
+        sheets,
         sheetName
       };
     } catch (error) {
@@ -123,7 +165,7 @@ export class ExcelAgent {
         ...params.options
       };
 
-      const workbook = XLSX.utils.book_new();
+      const workbook = new ExcelJS.Workbook();
 
       // Handle single sheet (array) or multi-sheet (object with sheet names as keys)
       if (Array.isArray(params.data)) {
@@ -131,8 +173,20 @@ export class ExcelAgent {
           throw new Error('Data array cannot be empty');
         }
 
-        const worksheet = XLSX.utils.json_to_sheet(params.data);
-        XLSX.utils.book_append_sheet(workbook, worksheet, options.sheetName);
+        const worksheet = workbook.addWorksheet(options.sheetName);
+        
+        // Extract headers from first data object
+        const firstRow = params.data[0] as Record<string, unknown>;
+        const headers = Object.keys(firstRow);
+        
+        // Add header row
+        worksheet.addRow(headers);
+        
+        // Add data rows
+        params.data.forEach((row) => {
+          const rowData = headers.map(header => (row as Record<string, unknown>)[header]);
+          worksheet.addRow(rowData);
+        });
       } else {
         // Multi-sheet workbook
         const sheets = Object.keys(params.data);
@@ -147,17 +201,25 @@ export class ExcelAgent {
             continue;
           }
 
-          const worksheet = XLSX.utils.json_to_sheet(sheetData);
-          XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+          const worksheet = workbook.addWorksheet(sheetName);
+          
+          // Extract headers from first data object
+          const firstRow = sheetData[0] as Record<string, unknown>;
+          const headers = Object.keys(firstRow);
+          
+          // Add header row
+          worksheet.addRow(headers);
+          
+          // Add data rows
+          sheetData.forEach((row) => {
+            const rowData = headers.map(header => (row as Record<string, unknown>)[header]);
+            worksheet.addRow(rowData);
+          });
         }
       }
 
       // Write to buffer
-      const buffer = XLSX.write(workbook, {
-        type: 'buffer',
-        bookType: options.bookType,
-        compression: options.compression
-      });
+      const buffer = await workbook.xlsx.writeBuffer();
 
       logger.info('Excel file generated successfully');
 
@@ -189,25 +251,53 @@ export class ExcelAgent {
     error?: string;
   }> {
     try {
-      const workbook = typeof params.input === 'string'
-        ? XLSX.readFile(params.input)
-        : XLSX.read(params.input, { type: 'buffer' });
+      const workbook = new ExcelJS.Workbook();
+      
+      if (typeof params.input === 'string') {
+        await workbook.xlsx.readFile(params.input);
+      } else {
+        await workbook.xlsx.load(bufferToArrayBuffer(params.input));
+      }
 
+      let worksheet: ExcelJS.Worksheet | undefined;
       let sheetName: string;
+      
       if (params.sheetName) {
+        worksheet = workbook.getWorksheet(params.sheetName);
         sheetName = params.sheetName;
       } else if (params.sheetIndex !== undefined) {
-        sheetName = workbook.SheetNames[params.sheetIndex];
+        worksheet = workbook.getWorksheet(params.sheetIndex + 1); // ExcelJS is 1-indexed
+        sheetName = worksheet?.name || '';
       } else {
         throw new Error('Either sheetName or sheetIndex must be provided');
       }
 
-      if (!sheetName || !workbook.Sheets[sheetName]) {
-        throw new Error(`Sheet not found: ${sheetName || 'index ' + params.sheetIndex}`);
+      if (!worksheet) {
+        throw new Error(`Sheet not found: ${params.sheetName || 'index ' + params.sheetIndex}`);
       }
 
-      const worksheet = workbook.Sheets[sheetName];
-      const data = XLSX.utils.sheet_to_json(worksheet);
+      // Convert sheet to JSON array
+      const data: unknown[] = [];
+      const headers: string[] = [];
+      
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) {
+          // First row is headers
+          row.eachCell((cell) => {
+            headers.push(String(cell.value || ''));
+          });
+        } else {
+          // Data rows
+          const rowData: Record<string, unknown> = {};
+          row.eachCell((cell, colNumber) => {
+            const header = headers[colNumber - 1];
+            if (header) {
+              rowData[header] = cell.value;
+            }
+          });
+          data.push(rowData);
+        }
+      });
 
       logger.info(`Sheet '${sheetName}' extracted: ${data.length} rows`);
 
@@ -238,11 +328,15 @@ export class ExcelAgent {
     error?: string;
   }> {
     try {
-      const workbook = typeof params.input === 'string'
-        ? XLSX.readFile(params.input)
-        : XLSX.read(params.input, { type: 'buffer' });
+      const workbook = new ExcelJS.Workbook();
+      
+      if (typeof params.input === 'string') {
+        await workbook.xlsx.readFile(params.input);
+      } else {
+        await workbook.xlsx.load(bufferToArrayBuffer(params.input));
+      }
 
-      const sheets = workbook.SheetNames;
+      const sheets = workbook.worksheets.map(ws => ws.name);
 
       logger.info(`Workbook contains ${sheets.length} sheets`);
 
@@ -263,8 +357,7 @@ export class ExcelAgent {
 
   /**
    * Apply formatting to cells
-   * Note: xlsx library has limited formatting support in free version.
-   * This provides basic structure; full formatting requires xlsx-style or similar.
+   * ExcelJS has full formatting support built-in
    */
   async formatCells(params: {
     input: Buffer | string;
@@ -277,12 +370,16 @@ export class ExcelAgent {
     error?: string;
   }> {
     try {
-      const workbook = typeof params.input === 'string'
-        ? XLSX.readFile(params.input)
-        : XLSX.read(params.input, { type: 'buffer' });
+      const workbook = new ExcelJS.Workbook();
+      
+      if (typeof params.input === 'string') {
+        await workbook.xlsx.readFile(params.input);
+      } else {
+        await workbook.xlsx.load(bufferToArrayBuffer(params.input));
+      }
 
-      const sheetName = params.sheetName || workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+      const sheetName = params.sheetName || workbook.worksheets[0]?.name;
+      const worksheet = workbook.getWorksheet(sheetName);
 
       if (!worksheet) {
         throw new Error(`Sheet not found: ${sheetName}`);
@@ -290,58 +387,61 @@ export class ExcelAgent {
 
       // Apply formats to cells
       for (const { cell, format } of params.formats) {
-        if (!worksheet[cell]) {
+        const cellObj = worksheet.getCell(cell);
+
+        if (!cellObj) {
           logger.warn(`Cell ${cell} not found in sheet ${sheetName}`);
           continue;
         }
 
-        // Initialize cell style if not exists
-        if (!worksheet[cell].s) {
-          worksheet[cell].s = {};
-        }
-
-        // Apply formatting (basic support)
-        // Note: Full formatting support requires additional libraries
-        const cellStyle: Record<string, unknown> = {};
-
+        // Apply font formatting
+        const font: Partial<ExcelJS.Font> = {};
         if (format.bold !== undefined) {
-          cellStyle.bold = format.bold;
+          font.bold = format.bold;
         }
         if (format.italic !== undefined) {
-          cellStyle.italic = format.italic;
+          font.italic = format.italic;
         }
         if (format.underline !== undefined) {
-          cellStyle.underline = format.underline;
+          font.underline = format.underline;
         }
         if (format.color) {
-          cellStyle.color = format.color;
-        }
-        if (format.bgColor) {
-          cellStyle.bgColor = format.bgColor;
+          font.color = { argb: format.color.replace('#', '') };
         }
         if (format.fontSize) {
-          cellStyle.fontSize = format.fontSize;
-        }
-        if (format.alignment) {
-          cellStyle.alignment = format.alignment;
+          font.size = format.fontSize;
         }
 
-        // Merge styles (in actual implementation with xlsx-style)
-        Object.assign(worksheet[cell].s, cellStyle);
+        if (Object.keys(font).length > 0) {
+          cellObj.font = { ...cellObj.font, ...font };
+        }
+
+        // Apply background color
+        if (format.bgColor) {
+          cellObj.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: format.bgColor.replace('#', '') }
+          };
+        }
+
+        // Apply alignment
+        if (format.alignment) {
+          cellObj.alignment = {
+            horizontal: format.alignment
+          };
+        }
       }
 
       // Write to buffer
-      const buffer = XLSX.write(workbook, {
-        type: 'buffer',
-        bookType: 'xlsx'
-      });
+      const buffer = await workbook.xlsx.writeBuffer();
 
       logger.info(`Formatted ${params.formats.length} cells in sheet '${sheetName}'`);
 
       return {
         success: true,
         buffer: Buffer.from(buffer),
-        message: 'Note: Basic formatting applied. For advanced formatting, consider using xlsx-style or similar libraries.'
+        message: 'Cell formatting applied successfully with ExcelJS'
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -371,19 +471,22 @@ export class ExcelAgent {
     error?: string;
   }> {
     try {
-      const workbook = typeof params.input === 'string'
-        ? XLSX.readFile(params.input)
-        : XLSX.read(params.input, { type: 'buffer' });
+      const workbook = new ExcelJS.Workbook();
+      
+      if (typeof params.input === 'string') {
+        await workbook.xlsx.readFile(params.input);
+      } else {
+        await workbook.xlsx.load(bufferToArrayBuffer(params.input));
+      }
 
-      const sheets = workbook.SheetNames.map(name => {
-        const worksheet = workbook.Sheets[name];
-        const data = XLSX.utils.sheet_to_json(worksheet);
-        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+      const sheets = workbook.worksheets.map(worksheet => {
+        const rowCount = worksheet.rowCount;
+        const columnCount = worksheet.columnCount;
 
         return {
-          name,
-          rowCount: data.length,
-          columnCount: range.e.c - range.s.c + 1
+          name: worksheet.name,
+          rowCount,
+          columnCount
         };
       });
 
