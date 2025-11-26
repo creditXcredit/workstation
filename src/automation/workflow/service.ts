@@ -6,6 +6,7 @@
 import { getDatabase, generateId, getCurrentTimestamp } from '../db/database';
 import { Workflow, CreateWorkflowInput, WorkflowDefinition } from '../db/models';
 import { logger } from '../../utils/logger';
+import { agentOrchestrator } from '../../services/agent-orchestrator';
 
 /**
  * Workflow version history entry
@@ -410,16 +411,57 @@ export class WorkflowService {
     for (const group of taskGroups) {
       logger.info('Executing parallel task group', { workflowId, tasks: group });
       
-      // In production, this would execute tasks in parallel
-      // For now, we simulate parallel execution
-      const groupResults = await Promise.all(
+      // Execute tasks in parallel with proper error handling
+      const groupResults = await Promise.allSettled(
         group.map(async (taskName) => {
-          return { taskName, status: 'completed', result: {} };
+          try {
+            // Create task for the workflow step
+            const taskId = await agentOrchestrator.createTask(
+              workflowId, // Using workflowId as agentId - should be mapped properly
+              'workflow_parallel_task',
+              {
+                taskName,
+                workflowId,
+                group
+              },
+              `workflow-parallel-${workflowId}`,
+              5
+            );
+
+            // Process the task
+            await agentOrchestrator.processTask(taskId);
+
+            // Get task result
+            const task = await agentOrchestrator.getTaskById(taskId);
+            
+            return { 
+              taskName, 
+              status: task?.status || 'unknown', 
+              result: task?.result || {} 
+            };
+          } catch (error: any) {
+            logger.error(`Parallel task ${taskName} failed:`, error);
+            return {
+              taskName,
+              status: 'failed',
+              result: { error: error.message }
+            };
+          }
         })
       );
 
-      groupResults.forEach(result => {
-        results.set(result.taskName, result);
+      // Process results and handle failures
+      groupResults.forEach((promiseResult, index) => {
+        const taskName = group[index];
+        if (promiseResult.status === 'fulfilled') {
+          results.set(taskName, promiseResult.value);
+        } else {
+          results.set(taskName, {
+            taskName,
+            status: 'failed',
+            result: { error: promiseResult.reason?.message || 'Unknown error' }
+          });
+        }
       });
     }
 

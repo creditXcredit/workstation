@@ -11,6 +11,7 @@
 import { logger } from '../../shared/utils/logger.js';
 import { withRetry, CircuitBreaker } from '../../shared/utils/retry.js';
 import { WorkflowDefinition } from '../db/models.js';
+import { agentOrchestrator } from '../../services/agent-orchestrator.js';
 
 export interface ExecutionContext {
   workflowId: string;
@@ -201,30 +202,59 @@ export class ExecutionEngine {
   }
 
   /**
-   * Execute step action (placeholder for actual implementation)
+   * Execute step action using agent orchestrator
    */
   private async executeStepAction(
     step: any,
     context: ExecutionContext
   ): Promise<any> {
-    // Simulate step execution
     logger.debug('Executing step action', {
       stepId: step.id,
       stepName: step.name,
       executionId: context.executionId,
+      agentId: step.agentId
     });
 
-    // In production, this would:
-    // 1. Call agent APIs
-    // 2. Execute browser automation
-    // 3. Process data transformations
-    // 4. Handle conditional logic
+    // Validate step has required properties
+    if (!step.agentId) {
+      throw new Error(`Step ${step.id} missing agentId`);
+    }
 
-    await this.sleep(100); // Simulate work
+    // Create task for agent orchestrator
+    const taskId = await agentOrchestrator.createTask(
+      step.agentId,
+      'workflow_step',
+      {
+        stepId: step.id,
+        stepName: step.name,
+        workflowId: context.workflowId,
+        executionId: context.executionId,
+        variables: context.variables,
+        action: step.action,
+        params: step.params,
+        expectedResult: step.expectedResult
+      },
+      `workflow-engine-${context.executionId}`,
+      step.priority || 5
+    );
+
+    // Process the task
+    await agentOrchestrator.processTask(taskId);
+
+    // Get task result
+    const task = await agentOrchestrator.getTaskById(taskId);
+    
+    if (!task) {
+      throw new Error(`Task ${taskId} not found after execution`);
+    }
+
+    if (task.status === 'failed') {
+      throw new Error(`Step ${step.name} failed: ${task.result?.error || 'Unknown error'}`);
+    }
 
     return {
       success: true,
-      data: { message: `Step ${step.name} completed` },
+      data: task.result || { message: `Step ${step.name} completed` },
     };
   }
 

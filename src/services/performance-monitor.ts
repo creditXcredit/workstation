@@ -11,6 +11,7 @@
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
 import { agentOrchestrator } from './agent-orchestrator';
+import db from '../db/connection';
 
 export interface AgentPerformanceMetrics {
   agentId: string;
@@ -118,7 +119,7 @@ export class PerformanceMonitor extends EventEmitter {
       }
 
       // Update connection pool metrics
-      this.updateConnectionPoolMetrics();
+      await this.updateConnectionPoolMetrics();
 
       const checkDuration = Date.now() - checkStartTime;
       logger.debug('Health check completed', {
@@ -242,23 +243,49 @@ export class PerformanceMonitor extends EventEmitter {
   }
 
   /**
-   * Update connection pool metrics
+   * Update connection pool metrics from PostgreSQL
    */
-  private updateConnectionPoolMetrics(): void {
-    // Simulate connection pool metrics
-    // In a real implementation, this would query the actual connection pool
-    const totalConnections = 20;
-    const activeConnections = this.metrics.size;
-    const idleConnections = totalConnections - activeConnections;
-    const waitingConnections = 0;
+  private async updateConnectionPoolMetrics(): Promise<void> {
+    try {
+      // Get real connection pool stats from PostgreSQL
+      const poolStatsQuery = `
+        SELECT 
+          (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') as max_connections,
+          (SELECT count(*) FROM pg_stat_activity WHERE state = 'active') as active_connections,
+          (SELECT count(*) FROM pg_stat_activity WHERE state = 'idle') as idle_connections,
+          (SELECT count(*) FROM pg_stat_activity WHERE wait_event_type IS NOT NULL) as waiting_connections
+      `;
+      
+      const result = await db.query(poolStatsQuery);
+      const stats = result.rows[0];
+      
+      const maxConnections = parseInt(stats.max_connections);
+      const activeConnections = parseInt(stats.active_connections);
+      const idleConnections = parseInt(stats.idle_connections);
+      const waitingConnections = parseInt(stats.waiting_connections);
+      const totalConnections = activeConnections + idleConnections;
 
-    this.connectionPool = {
-      totalConnections,
-      activeConnections,
-      idleConnections,
-      waitingConnections,
-      poolUtilization: (activeConnections / totalConnections) * 100,
-    };
+      this.connectionPool = {
+        totalConnections,
+        activeConnections,
+        idleConnections,
+        waitingConnections,
+        poolUtilization: maxConnections > 0 ? (totalConnections / maxConnections) * 100 : 0,
+      };
+
+      logger.debug('Connection pool metrics updated', this.connectionPool);
+    } catch (error: any) {
+      logger.error('Failed to update connection pool metrics', { error: error.message });
+      
+      // Fallback to defaults on error
+      this.connectionPool = {
+        totalConnections: 0,
+        activeConnections: 0,
+        idleConnections: 0,
+        waitingConnections: 0,
+        poolUtilization: 0,
+      };
+    }
   }
 
   /**

@@ -6,7 +6,9 @@
 
 import * as PDFParser from 'pdf-parse';
 import * as PDFDocument from 'pdfkit';
+import { PDFDocument as PDFLib } from 'pdf-lib';
 import { logger } from '../../../utils/logger';
+import * as fs from 'fs';
 
 export interface PdfExtractOptions {
   pageRange?: { start: number; end: number };
@@ -389,21 +391,56 @@ export class PdfAgent {
     input: Buffer;
   }): Promise<{
     success: boolean;
-    pages?: Buffer[];
+    pages?: Array<{ pageNumber: number; buffer: Buffer }>;
     error?: string;
     message?: string;
   }> {
     try {
-      await (PDFParser as any)(params.input);
+      // Read the PDF file
+      let pdfBuffer: Buffer;
       
-      // Note: pdf-parse doesn't provide easy page-by-page access
-      // This is a placeholder implementation
-      logger.warn('PDF splitting is limited with pdf-parse. Consider using pdf-lib for better results.');
+      if (typeof params.input === 'string') {
+        // It's a file path
+        pdfBuffer = await fs.promises.readFile(params.input);
+      } else if (Buffer.isBuffer(params.input)) {
+        pdfBuffer = params.input;
+      } else {
+        throw new Error('Invalid input type. Expected file path or Buffer');
+      }
+
+      // Load the PDF with pdf-lib
+      const pdfDoc = await PDFLib.load(pdfBuffer);
+      const pageCount = pdfDoc.getPageCount();
+      
+      const pages: Array<{ pageNumber: number; buffer: Buffer }> = [];
+
+      // Split PDF into individual pages
+      for (let i = 0; i < pageCount; i++) {
+        // Create a new PDF document for each page
+        const singlePageDoc = await PDFLib.create();
+        
+        // Copy the page from the original document
+        const [copiedPage] = await singlePageDoc.copyPages(pdfDoc, [i]);
+        singlePageDoc.addPage(copiedPage);
+        
+        // Save the single-page PDF as buffer
+        const pageBuffer = Buffer.from(await singlePageDoc.save());
+        
+        pages.push({
+          pageNumber: i + 1,
+          buffer: pageBuffer
+        });
+      }
+
+      logger.info('PDF split completed', { 
+        totalPages: pageCount,
+        pagesExtracted: pages.length 
+      });
 
       return {
         success: true,
-        pages: [],
-        message: 'PDF splitting requires pdf-lib or similar libraries for accurate page-by-page extraction.'
+        pages,
+        message: `Successfully split PDF into ${pageCount} pages`
       };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';

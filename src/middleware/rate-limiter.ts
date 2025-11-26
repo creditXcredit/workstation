@@ -6,6 +6,7 @@
 import rateLimit, { RateLimitRequestHandler } from 'express-rate-limit';
 import RedisStore from 'rate-limit-redis';
 import Redis from 'ioredis';
+import os from 'os';
 import { logger } from '../utils/logger';
 
 // Redis client for rate limiting
@@ -172,20 +173,52 @@ export const websocketRateLimiter = createAdaptiveLimiter({
 export class AdaptiveRateLimiter {
   private currentLoad: number = 0;
   private maxLoad: number = 0.8; // 80% CPU threshold
+  private cpuSamples: number[] = [];
+  private readonly SAMPLE_SIZE = 5;
 
   constructor() {
-    // Monitor server load (simplified - in production use proper monitoring)
+    // Monitor server load using real system metrics
     setInterval(() => {
-      // This would integrate with actual server metrics
-      // For now, using a placeholder
       this.updateLoad();
     }, 10000);
+    
+    // Initial load check
+    this.updateLoad();
   }
 
   private updateLoad(): void {
-    // Placeholder - integrate with actual metrics
-    // In production, this would check CPU, memory, active connections, etc.
-    this.currentLoad = Math.random(); // Mock load
+    // Get real CPU load average (1 minute average)
+    const cpus = os.cpus();
+    const cpuCount = cpus.length;
+    
+    // Calculate CPU usage from load average
+    const loadAvg = os.loadavg()[0]; // 1-minute load average
+    const cpuUsage = loadAvg / cpuCount; // Normalize by CPU count
+    
+    // Add to samples for smoothing
+    this.cpuSamples.push(cpuUsage);
+    if (this.cpuSamples.length > this.SAMPLE_SIZE) {
+      this.cpuSamples.shift();
+    }
+    
+    // Calculate average from samples
+    const avgCpuUsage = this.cpuSamples.reduce((a, b) => a + b, 0) / this.cpuSamples.length;
+    
+    // Get memory usage
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const memUsage = (totalMem - freeMem) / totalMem;
+    
+    // Combined load metric (70% CPU, 30% memory)
+    this.currentLoad = (avgCpuUsage * 0.7) + (memUsage * 0.3);
+    
+    logger.debug('System load updated', {
+      cpuUsage: avgCpuUsage.toFixed(2),
+      memUsage: memUsage.toFixed(2),
+      currentLoad: this.currentLoad.toFixed(2),
+      loadAvg: loadAvg.toFixed(2),
+      cpuCount
+    });
   }
 
   /**
