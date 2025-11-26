@@ -7,6 +7,8 @@
 import { logger } from '../../../utils/logger';
 import fs from 'fs/promises';
 import path from 'path';
+import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 
 export interface FileConfig {
   storageType: 'local' | 's3' | 'gcs' | 'azure';
@@ -41,7 +43,7 @@ export interface FileInfo {
  * File Agent Implementation
  */
 export class FileAgent {
-  private s3Client: any = null;
+  private s3Client: S3Client | null = null;
   private gcsClient: any = null;
   private azureClient: any = null;
 
@@ -54,11 +56,18 @@ export class FileAgent {
    */
   private initializeClients(): void {
     if (this.config.storageType === 's3' && this.config.s3Config) {
-      // Placeholder for S3 client initialization
-      // Production would use @aws-sdk/client-s3
-      this.s3Client = {
-        config: this.config.s3Config
-      };
+      // Real S3 client initialization using AWS SDK v3
+      this.s3Client = new S3Client({
+        region: this.config.s3Config.region,
+        credentials: {
+          accessKeyId: this.config.s3Config.accessKeyId,
+          secretAccessKey: this.config.s3Config.secretAccessKey
+        }
+      });
+      logger.info('S3 client initialized', { 
+        region: this.config.s3Config.region, 
+        bucket: this.config.s3Config.bucket 
+      });
     } else if (this.config.storageType === 'gcs' && this.config.gcsConfig) {
       // Placeholder for GCS client initialization
       // Production would use @google-cloud/storage
@@ -87,10 +96,42 @@ export class FileAgent {
       const fullPath = path.join(this.config.basePath || '', params.path);
       const content = await fs.readFile(fullPath, params.encoding ? { encoding: params.encoding as 'utf-8' | 'base64' } : undefined);
       return content;
-    } else if (this.config.storageType === 's3' && this.s3Client) {
-      // Placeholder for S3 read
-      // Production would use GetObjectCommand
-      throw new Error('S3 read not implemented in demo version');
+    } else if (this.config.storageType === 's3' && this.s3Client && this.config.s3Config) {
+      // Real S3 read implementation using AWS SDK v3
+      try {
+        const command = new GetObjectCommand({
+          Bucket: this.config.s3Config.bucket,
+          Key: params.path
+        });
+        
+        const response = await this.s3Client.send(command);
+        
+        if (!response.Body) {
+          throw new Error('No body in S3 response');
+        }
+        
+        // Convert stream to buffer
+        const stream = response.Body as Readable;
+        const chunks: Buffer[] = [];
+        
+        for await (const chunk of stream) {
+          chunks.push(Buffer.from(chunk));
+        }
+        
+        const buffer = Buffer.concat(chunks);
+        
+        // Return based on encoding
+        if (params.encoding === 'utf-8') {
+          return buffer.toString('utf-8');
+        } else if (params.encoding === 'base64') {
+          return buffer.toString('base64');
+        }
+        
+        return buffer;
+      } catch (error: any) {
+        logger.error('S3 read failed', { error: error.message, path: params.path });
+        throw new Error(`Failed to read file from S3: ${error.message}`);
+      }
     }
 
     throw new Error(`Unsupported storage type: ${this.config.storageType}`);
@@ -111,9 +152,33 @@ export class FileAgent {
       await fs.mkdir(path.dirname(fullPath), { recursive: true });
       await fs.writeFile(fullPath, params.content, params.encoding ? { encoding: params.encoding as 'utf-8' | 'base64' } : undefined);
       logger.info('File written successfully', { path: params.path });
-    } else if (this.config.storageType === 's3' && this.s3Client) {
-      // Placeholder for S3 write
-      throw new Error('S3 write not implemented in demo version');
+    } else if (this.config.storageType === 's3' && this.s3Client && this.config.s3Config) {
+      // Real S3 write implementation using AWS SDK v3
+      try {
+        let body: Buffer;
+        
+        if (typeof params.content === 'string') {
+          if (params.encoding === 'base64') {
+            body = Buffer.from(params.content, 'base64');
+          } else {
+            body = Buffer.from(params.content, 'utf-8');
+          }
+        } else {
+          body = params.content;
+        }
+        
+        const command = new PutObjectCommand({
+          Bucket: this.config.s3Config.bucket,
+          Key: params.path,
+          Body: body
+        });
+        
+        await this.s3Client.send(command);
+        logger.info('File written to S3 successfully', { path: params.path, bucket: this.config.s3Config.bucket });
+      } catch (error: any) {
+        logger.error('S3 write failed', { error: error.message, path: params.path });
+        throw new Error(`Failed to write file to S3: ${error.message}`);
+      }
     } else {
       throw new Error(`Unsupported storage type: ${this.config.storageType}`);
     }

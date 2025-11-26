@@ -8,6 +8,8 @@ import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { google } from 'googleapis';
 import { logger } from '../../../utils/logger';
+import imaps from 'imap-simple';
+import { simpleParser } from 'mailparser';
 
 export interface EmailConfig {
   provider: 'gmail' | 'outlook' | 'imap' | 'smtp';
@@ -258,8 +260,12 @@ export class EmailAgent {
       return this.getGmailUnreadEmails(params);
     }
 
-    // For other providers, return empty array (IMAP implementation would go here)
-    logger.warn('Email fetching not implemented for non-Gmail providers');
+    // IMAP implementation for other providers
+    if ((this.config.provider === 'imap' || this.config.provider === 'outlook') && this.config.imapHost) {
+      return this.getImapUnreadEmails(params);
+    }
+
+    logger.warn('Email fetching not fully configured for this provider', { provider: this.config.provider });
     return [];
   }
 
@@ -323,6 +329,101 @@ export class EmailAgent {
   }
 
   /**
+   * Get unread emails from IMAP server
+   */
+  private async getImapUnreadEmails(params: {
+    folder?: string;
+    limit?: number;
+    since?: Date;
+  }): Promise<EmailMessage[]> {
+    try {
+      const config = {
+        imap: {
+          user: this.config.email,
+          password: this.config.password || '',
+          host: this.config.imapHost || 'imap.gmail.com',
+          port: this.config.imapPort || 993,
+          tls: this.config.secure !== false,
+          authTimeout: 3000
+        }
+      };
+
+      // Connect to IMAP server
+      const connection = await imaps.connect(config);
+      
+      try {
+        // Open mailbox
+        await connection.openBox(params.folder || 'INBOX');
+        
+        // Search for unread emails
+        const searchCriteria: any[] = ['UNSEEN'];
+        if (params.since) {
+          searchCriteria.push(['SINCE', params.since]);
+        }
+        
+        const fetchOptions = {
+          bodies: ['HEADER', 'TEXT'],
+          markSeen: false
+        };
+        
+        const results = await connection.search(searchCriteria, fetchOptions);
+        
+        // Limit results if specified
+        const limitedResults = params.limit ? results.slice(0, params.limit) : results;
+        
+        // Parse emails
+        const emails: EmailMessage[] = [];
+        
+        for (const item of limitedResults) {
+          const all = item.parts.find((part: any) => part.which === '');
+          const id = item.attributes.uid.toString();
+          const idHeader = "Imap-Id: " + id + "\r\n";
+          
+          if (all) {
+            const parsed = await simpleParser(idHeader + all.body);
+            
+            // Helper to extract email address text
+            const getAddressText = (addr: any): string => {
+              if (!addr) return '';
+              if (typeof addr === 'string') return addr;
+              if (Array.isArray(addr)) {
+                return addr.map(a => a.text || '').join(', ');
+              }
+              return addr.text || '';
+            };
+            
+            emails.push({
+              id: id,
+              from: getAddressText(parsed.from),
+              to: getAddressText(parsed.to),
+              subject: parsed.subject || '',
+              date: parsed.date || new Date(),
+              body: parsed.text || '',
+              html: parsed.html || undefined,
+              attachments: (parsed.attachments || []).map((att: any) => ({
+                filename: att.filename || 'unknown',
+                contentType: att.contentType || 'application/octet-stream',
+                size: att.size || 0
+              }))
+            });
+          }
+        }
+        
+        connection.end();
+        logger.info('Fetched IMAP emails successfully', { count: emails.length });
+        return emails;
+        
+      } catch (error) {
+        connection.end();
+        throw error;
+      }
+    } catch (error) {
+      logger.error('Failed to fetch IMAP emails', { error });
+      throw error;
+    }
+  }
+
+  /**
    * Mark emails as read in Gmail
    */
   async markAsRead(emailIds: string[]): Promise<void> {
@@ -348,8 +449,42 @@ export class EmailAgent {
         logger.error('Failed to mark emails as read', { error });
         throw error;
       }
+    } else if ((this.config.provider === 'imap' || this.config.provider === 'outlook') && this.config.imapHost) {
+      // IMAP implementation for marking as read
+      try {
+        const config = {
+          imap: {
+            user: this.config.email,
+            password: this.config.password || '',
+            host: this.config.imapHost || 'imap.gmail.com',
+            port: this.config.imapPort || 993,
+            tls: this.config.secure !== false,
+            authTimeout: 3000
+          }
+        };
+
+        const connection = await imaps.connect(config);
+        
+        try {
+          await connection.openBox('INBOX');
+          
+          // Mark each email as read by setting the SEEN flag
+          for (const id of emailIds) {
+            await connection.addFlags(id, '\\Seen');
+          }
+          
+          connection.end();
+          logger.info('IMAP emails marked as read successfully');
+        } catch (error) {
+          connection.end();
+          throw error;
+        }
+      } catch (error) {
+        logger.error('Failed to mark IMAP emails as read', { error });
+        throw error;
+      }
     } else {
-      logger.warn('Mark as read not implemented for non-Gmail providers');
+      logger.warn('Mark as read not fully configured for this provider', { provider: this.config.provider });
     }
   }
 
@@ -388,7 +523,7 @@ export class EmailAgent {
         throw error;
       }
     } else {
-      logger.warn('Filter creation not implemented for non-Gmail providers');
+      logger.warn('Filter creation only supported for Gmail provider');
     }
   }
 

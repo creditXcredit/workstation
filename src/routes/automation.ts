@@ -9,6 +9,7 @@ import { orchestrationEngine } from '../automation/orchestrator/engine';
 import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
 import { logger } from '../utils/logger';
 import { executionRateLimiter } from '../middleware/advanced-rate-limit';
+import db from '../db/connection';
 
 const router = Router();
 
@@ -582,17 +583,44 @@ router.get('/templates', authenticateToken, async (req: Request, res: Response) 
  */
 router.get('/templates/:id', authenticateToken, async (req: Request, res: Response) => {
   try {
-    // In a real implementation, this would query a database
-    // For now, we'll return a simple hardcoded template
+    // Query database for workflow template
+    const result = await db.query(
+      `SELECT 
+        id, 
+        name, 
+        description, 
+        workflow_definition as definition,
+        category,
+        tags,
+        created_at,
+        updated_at,
+        templates_used
+      FROM saved_workflows 
+      WHERE id = $1 AND is_template = true`,
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Template not found'
+      });
+    }
+
+    const template = result.rows[0];
+
     res.json({
       success: true,
       data: {
-        id: req.params.id,
-        name: 'Template',
-        description: 'Workflow template',
-        definition: {
-          tasks: []
-        }
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        definition: template.definition,
+        category: template.category,
+        tags: template.tags,
+        createdAt: template.created_at,
+        updatedAt: template.updated_at,
+        usageCount: template.templates_used
       }
     });
   } catch (error) {

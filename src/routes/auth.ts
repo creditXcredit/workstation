@@ -287,16 +287,62 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
 });
 
 /**
- * Verify email token (placeholder for email verification)
+ * Verify email token
  * GET /api/auth/verify/:token
  */
 router.get('/verify/:token', async (req: Request, res: Response) => {
   try {
-    // TODO: Implement email verification logic
-    res.json({
-      success: true,
-      message: 'Email verification endpoint (not yet implemented)'
-    });
+    const { token } = req.params;
+
+    // Verify the token using JWT
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-min-32-chars-long-for-testing-only';
+
+    try {
+      // Decode and verify the token
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; type: string };
+
+      // Check if this is an email verification token
+      if (decoded.type !== 'email-verification') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid verification token type'
+        });
+      }
+
+      // Update user's verified status
+      const result = await db.query(
+        'UPDATE users SET is_verified = true, updated_at = NOW() WHERE id = $1 RETURNING id, email, is_verified',
+        [decoded.userId]
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+
+      const user = result.rows[0];
+
+      logger.info('Email verified successfully', { userId: user.id, email: user.email });
+
+      res.json({
+        success: true,
+        message: 'Email verified successfully',
+        data: {
+          userId: user.id,
+          email: user.email,
+          isVerified: user.is_verified
+        }
+      });
+    } catch (jwtError: any) {
+      logger.error('Invalid verification token', { error: jwtError.message });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid or expired verification token'
+      });
+    }
   } catch (error) {
     logger.error('Email verification error', { error });
     res.status(500).json({
