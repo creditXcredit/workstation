@@ -151,24 +151,38 @@ function sendResponse(response: any) {
 
 #### 2. HTTP/WebSocket
 
-Used for web-based integrations:
+Used for web-based integrations and real-time communication:
+
+**WebSocket Endpoint**: `ws://localhost:3000/mcp`
 
 ```typescript
-// HTTP endpoint
+// HTTP endpoint (for REST-style requests)
 app.post('/mcp/invoke', async (req, res) => {
   const result = await handleMCPRequest(req.body);
   res.json(result);
 });
 
-// WebSocket for streaming
-wss.on('connection', (ws) => {
-  ws.on('message', async (data) => {
-    const request = JSON.parse(data.toString());
-    const result = await handleMCPRequest(request);
-    ws.send(JSON.stringify(result));
-  });
-});
+// WebSocket for streaming and real-time updates
+// Endpoint: ws://localhost:PORT/mcp
+// Initialized in src/index.ts with JWT authentication
+import MCPWebSocketServer from './services/mcp-websocket';
+
+const server = app.listen(PORT);
+const mcpWebSocketServer = new MCPWebSocketServer(server);
+// Automatic connection handling with:
+// - JWT token verification
+// - Per-user rate limiting
+// - Message rate limiting
+// - Bidirectional communication with Chrome extension
 ```
+
+**Features**:
+- ✅ JWT authentication on all connections
+- ✅ Per-user connection rate limiting
+- ✅ Message rate limiting
+- ✅ Real-time bidirectional communication
+- ✅ Automatic reconnection support
+- ✅ Channel-based pub/sub messaging
 
 ## Tool Definition Schema
 

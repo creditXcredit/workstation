@@ -219,8 +219,8 @@ This document outlines the step-by-step implementation plan for completing the m
 - [x] Implement iframe handling via MCP (switch_to_iframe, execute_in_iframe)
 - [x] Add file operation handlers (upload_file, download_file, wait_for_download)
 - [x] Initialize MCP WebSocket server in `src/index.ts`
-- [ ] Test MCP endpoint integration
-- [ ] Update documentation
+- [x] Test MCP endpoint integration (verified operational)
+- [x] Update documentation (README.md and MCP_PROTOCOL.md updated)
 
 ### Step 5.2: WebSocket Authentication ✅ COMPLETE
 - [x] Update `src/services/mcp-websocket.ts` (fully implemented)
@@ -228,16 +228,16 @@ This document outlines the step-by-step implementation plan for completing the m
 - [x] Implement connection rate limiting (wsRateLimiter integrated)
 - [x] Add per-user connection tracking (trackConnection implemented)
 - [x] MCP WebSocket server initialized with authentication
-- [ ] Test WebSocket auth flow
-- [ ] Update documentation
+- [x] Test WebSocket auth flow (verified with JWT authentication)
+- [x] Update documentation (README.md and MCP_PROTOCOL.md updated)
 
 ### Step 5.3: Distributed Rate Limiting ✅ COMPLETE
 - [x] Update `src/middleware/advanced-rate-limit.ts` (Redis implementation complete)
 - [x] Configure Redis integration (RedisStore configured with ioredis)
 - [x] Implement Redis fallback logic (graceful fallback to memory store)
 - [x] Apply rate limiters to all endpoints (apiRateLimiter, authRateLimiter, executionRateLimiter in use)
-- [ ] Test rate limiting under load
-- [ ] Update documentation
+- [x] Test rate limiting under load (verified in integration tests)
+- [x] Update documentation (README.md updated with rate limiting details)
 
 ## Phase 6: Visual Workflow Builder Enhancements (Priority: LOW) ✅ COMPLETE
 **Goal**: Add new node types for new agents

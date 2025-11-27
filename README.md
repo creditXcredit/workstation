@@ -166,6 +166,18 @@ npm run test:chrome
 - **CORS Protection**: Configurable origin whitelist
 - **GDPR Compliance**: IP anonymization in logs
 
+### 🌐 Real-Time Communication
+- **WebSocket Endpoints**:
+  - `ws://localhost:3000/ws/executions` - Workflow execution updates
+  - `ws://localhost:3000/mcp` - MCP protocol integration (NEW!)
+- **Features**:
+  - JWT authentication on all connections
+  - Per-user rate limiting
+  - Automatic reconnection
+  - Channel-based pub/sub messaging
+- **MCP WebSocket**: Real-time bidirectional communication with Chrome extension and AI agents
+- 📖 [MCP Protocol Documentation](docs/MCP_PROTOCOL.md)
+
 ### 🎨 User Interfaces
 - **Landing Page**: Feature showcase and documentation
 - **Simple Dashboard**: JWT and API testing
