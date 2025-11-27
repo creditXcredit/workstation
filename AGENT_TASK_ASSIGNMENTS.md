@@ -17,91 +17,33 @@ Based on the [Repository Completion Analysis](REPOSITORY_COMPLETION_ANALYSIS.md)
 
 ## 🔴 CRITICAL TASKS (Week 1 - Immediate)
 
-### Task 1: Fix TypeScript Build Errors (2-4 hours)
+### Task 0: Fix Build Configuration (<1 hour)
 
-**Agent Assignment**: **Agent 7 - Code Quality & Security Scanner**
+**Agent Assignment**: **Manual Fix** (no agent needed - trivial task)
 
 **Rationale**:
-- Agent 7 specializes in code quality and error detection
-- Has expertise in TypeScript strict mode compliance
-- Can systematically identify and fix syntax errors
-- Automated error detection and correction
+- Simple npm install command
+- No code changes required
+- Takes less than 15 minutes
 
 **Task Details**:
-- Fix 27 TypeScript compilation errors
-- Files: `src/services/workflow-websocket.ts` (24 errors), `src/utils/health-check.ts` (3 errors)
-- Error type: Missing commas in object literals (TS1005)
-- Verify with `npm run build`
+- Install missing @types/node package
+- Verify build passes
+- No code modifications needed
 
-**Agent Instructions**:
-```yaml
-agent: agent7
-task: fix_typescript_errors
-priority: CRITICAL
-files:
-  - src/services/workflow-websocket.ts
-  - src/utils/health-check.ts
-actions:
-  - Scan files for TS1005 errors (missing commas)
-  - Fix all syntax errors maintaining code logic
-  - Run npm run build to verify
-  - Run npm run lint to ensure no new issues
-success_criteria:
-  - npm run build completes with 0 errors
-  - No breaking changes to functionality
-estimated_hours: 2-4
+**Fix Instructions**:
+```bash
+npm install --save-dev @types/node
+npm run build  # Verify success
 ```
+
+**Success Criteria**:
+- ✅ `npm run build` completes with 0 errors
+- ✅ TypeScript compilation successful
 
 ---
 
-### Task 2: Fix Security Vulnerabilities (3-6 hours)
-
-**Agent Assignment**: **Agent 7 - Code Quality & Security Scanner** + **Agent 5 - DevOps & Containerization**
-
-**Rationale**:
-- Agent 7: Security vulnerability scanning and dependency analysis
-- Agent 5: Dependency management and build optimization
-- Combined expertise ensures secure dependency replacement
-
-**Task Details**:
-- Fix 5 high-severity CVEs
-- Replace `xlsx` with `exceljs` (no vulnerabilities)
-- Downgrade `imap-simple` to v1.6.3
-- Update `src/automation/agents/data/excel.ts` to use exceljs
-- Verify with `npm audit`
-
-**Agent Instructions**:
-```yaml
-agents: [agent7, agent5]
-task: fix_security_vulnerabilities
-priority: CRITICAL
-dependencies:
-  remove:
-    - xlsx
-  add:
-    - exceljs
-  downgrade:
-    - imap-simple@1.6.3
-files_to_update:
-  - src/automation/agents/data/excel.ts (switch from xlsx to exceljs)
-  - package.json
-actions:
-  - Agent 7: Scan and identify all vulnerable dependencies
-  - Agent 5: Replace xlsx with exceljs in package.json
-  - Agent 7: Update excel.ts to use exceljs API
-  - Agent 5: Downgrade imap-simple to v1.6.3
-  - Agent 7: Run npm audit to verify 0 high vulnerabilities
-  - Agent 5: Test Excel agent functionality
-success_criteria:
-  - npm audit shows 0 high/critical vulnerabilities
-  - Excel agent tests pass
-  - Email agent tests pass
-estimated_hours: 3-6
-```
-
----
-
-### Task 3: Create Missing Test Suites (20-30 hours)
+### Task 1: Create Missing Test Suites (20-30 hours)
 
 **Agent Assignment**: **Agent 3 - Testing & Quality Assurance**
 
@@ -126,7 +68,7 @@ test_suites_to_create:
   data_agents:
     - tests/agents/data/csv.test.ts
     - tests/agents/data/json.test.ts
-    - tests/agents/data/excel.test.ts (use exceljs)
+    - tests/agents/data/excel.test.ts (use @e965/xlsx)
     - tests/agents/data/pdf.test.ts
   integration_agents:
     - tests/agents/integration/sheets.test.ts
@@ -161,6 +103,8 @@ success_criteria:
   - No critical bugs discovered
 estimated_hours: 20-30
 ```
+
+**Note**: Security fixes are complete (see SECURITY_FIX_ISSUE_246.md), so previous Task 1 and Task 2 are no longer needed.
 
 ---
 
@@ -610,8 +554,7 @@ estimated_hours: 20-40
 
 | Task | Agent(s) | Priority | Hours | Week |
 |------|----------|----------|-------|------|
-| **Fix Build Errors** | Agent 7 | CRITICAL | 2-4 | 1 |
-| **Fix Security Vulns** | Agent 7 + Agent 5 | CRITICAL | 3-6 | 1 |
+| **Fix Build Config** | Manual (npm install) | HIGH | <1 | 1 |
 | **Create Test Suites** | Agent 3 | CRITICAL | 20-30 | 1-2 |
 | **Master Orchestrator** | Agent 20 + Agent 17 | HIGH | 40-60 | 2-3 |
 | **Chrome ↔ MCP** | Agent 17 + Agent 14 | HIGH | 40-60 | 2-3 |
@@ -622,8 +565,10 @@ estimated_hours: 20-40
 | **Secrets Management** | Agent 7 + Agent 5 | MEDIUM | 40-60 | 7-9 |
 | **Advanced Scheduling** | Agent 2 | MEDIUM | 20-40 | 10-11 |
 
-**Total Estimated Hours**: 343-562 hours  
-**Total Estimated Weeks**: 8-14 weeks (at 40 hours/week)
+**Total Estimated Hours**: 298-502 hours (reduced from 343-562)  
+**Total Estimated Weeks**: 7-13 weeks (at 40 hours/week)
+
+**Note**: Security fixes already completed (saved 3-6 hours), build fix is trivial (saved 2-4 hours)
 
 ---
 
