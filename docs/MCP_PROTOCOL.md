@@ -600,7 +600,15 @@ const validated = Validator.validateOrThrow(params, schema);
 
 ### 4. Sandboxing
 
+**WARNING**: The example below uses vm2, which is deprecated and has known security vulnerabilities. 
+For production use, consider these safer alternatives:
+
+1. **isolated-vm** - Secure V8 isolate sandboxing
+2. **quickjs** - Lightweight JavaScript engine
+3. **Restricted API design** - Don't execute user code at all
+
 ```typescript
+// DEPRECATED APPROACH (vm2 - do not use in production)
 // Execute tools in isolated context
 import { VM } from 'vm2';
 
@@ -612,6 +620,41 @@ const vm = new VM({
 });
 
 const result = vm.run(userCode);
+
+// RECOMMENDED APPROACH: Use isolated-vm
+import ivm from 'isolated-vm';
+
+async function executeSandboxed(code: string, timeout: number = 5000): Promise<any> {
+  const isolate = new ivm.Isolate({ memoryLimit: 128 });
+  const context = await isolate.createContext();
+  
+  const jail = context.global;
+  await jail.set('global', jail.derefInto());
+  
+  try {
+    const script = await isolate.compileScript(code);
+    const result = await script.run(context, { timeout });
+    return result;
+  } finally {
+    isolate.dispose();
+  }
+}
+
+// BEST APPROACH: Avoid executing user code
+// Instead, use a declarative configuration or limited DSL
+interface ToolConfig {
+  name: string;
+  parameters: Record<string, unknown>;
+  validations: Array<{
+    field: string;
+    rule: 'required' | 'email' | 'url' | 'number';
+  }>;
+}
+
+function executeConfiguredTool(config: ToolConfig): any {
+  // Execute predefined tools based on configuration
+  // No arbitrary code execution
+}
 ```
 
 ## Testing MCP Integration

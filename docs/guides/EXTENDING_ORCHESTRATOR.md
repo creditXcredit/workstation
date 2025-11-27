@@ -289,6 +289,13 @@ export class ConditionalExecutionPattern {
 
   /**
    * Safely evaluate a condition expression
+   * 
+   * WARNING: This is a simplified example for demonstration.
+   * In production, use a safer expression evaluator like:
+   * - expr-eval library
+   * - mathjs for mathematical expressions
+   * - jsonpath for data queries
+   * - A custom parser with limited operations
    */
   private evaluateCondition(
     condition: string,
@@ -298,6 +305,14 @@ export class ConditionalExecutionPattern {
     }
   ): boolean {
     try {
+      // SECURITY WARNING: Function constructor and 'with' can be dangerous
+      // This is for demonstration only. Use a safer library in production:
+      // 
+      // Example with expr-eval:
+      // import { Parser } from 'expr-eval';
+      // const parser = new Parser();
+      // return Boolean(parser.evaluate(condition, context));
+      
       // Create a safe evaluation context
       const safeContext = {
         vars: context.variables,
@@ -305,6 +320,7 @@ export class ConditionalExecutionPattern {
       };
 
       // Use Function constructor for safer evaluation than eval
+      // Note: Still not recommended for untrusted input
       const func = new Function(
         'ctx',
         `with(ctx) { return ${condition}; }`
