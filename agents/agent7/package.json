@@ -1,0 +1,35 @@
+{
+  "name": "agent7-security-scanner",
+  "version": "1.0.0",
+  "description": "Agent 7: Security & Penetration Testing - TypeScript Error Detection and CVE Fixing",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node src/security-scanner.ts",
+    "scan": "node dist/security-scanner.js",
+    "fix-typescript": "node dist/typescript-fixer.js",
+    "fix-cve": "node dist/cve-fixer.js",
+    "lint": "eslint src",
+    "test": "echo \"Tests not implemented yet\" && exit 0"
+  },
+  "keywords": [
+    "agent7",
+    "security",
+    "scanner",
+    "typescript",
+    "cve",
+    "vulnerabilities"
+  ],
+  "author": "stackconsult",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^20.19.25",
+    "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.48.0",
+    "@typescript-eslint/parser": "^8.48.0",
+    "eslint": "^9.39.1",
+    "ts-node": "^10.9.1"
+  }
+}
