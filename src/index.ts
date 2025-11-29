@@ -317,8 +317,9 @@ import contextMemoryRoutes from './routes/context-memory';
 app.use('/api/v2/context', contextMemoryRoutes);
 logger.info('Context-Memory Intelligence Layer routes registered');
 
-// Import WebSocket server for real-time updates
+// Import WebSocket servers for real-time updates
 import { workflowWebSocketServer } from './services/workflow-websocket';
+import MCPWebSocketServer from './services/mcp-websocket';
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
@@ -338,12 +339,17 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`📍 Environment: ${envConfig.nodeEnv}`);
     console.log(`🏥 Health check: http://localhost:${PORT}/health`);
     console.log(`🔑 Demo token: http://localhost:${PORT}/auth/demo-token`);
-    console.log(`🌐 WebSocket: ws://localhost:${PORT}/ws/executions`);
+    console.log(`🌐 Workflow WebSocket: ws://localhost:${PORT}/ws/executions`);
+    console.log(`🔌 MCP WebSocket: ws://localhost:${PORT}/mcp`);
   });
   
   // Initialize WebSocket server for real-time workflow updates
   workflowWebSocketServer.initialize(server);
   logger.info('WebSocket server initialized for real-time workflow updates');
+  
+  // Phase 5.1 & 5.2: Initialize MCP WebSocket server for MCP protocol integration
+  const mcpWebSocketServer = new MCPWebSocketServer(server);
+  logger.info('MCP WebSocket server initialized for protocol integration');
 }
 
 export default app;
