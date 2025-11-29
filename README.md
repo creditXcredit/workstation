@@ -198,7 +198,7 @@ npm run test:chrome
 - **Chrome Extension Integration**: Quick start templates from browser extension
 - **Customizable**: Full parameter customization after loading
 - **Categories**: Scraping, automation, data processing, integration, monitoring, e-commerce, social media, reporting
-- 📖 [Template Documentation](WORKFLOW_TEMPLATES.md) | [Template Guide](docs/WORKFLOW_TEMPLATE_GUIDE.md)
+- 📖 [Template Documentation](WORKFLOW_TEMPLATES.md) | [Template Implementation](WORKFLOW_TEMPLATES_IMPLEMENTATION.md)
 
 ### 🔄 MCP Repository Sync
 - **Automated Sync**: Monitors private MCP repo every 5 minutes
