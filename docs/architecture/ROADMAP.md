@@ -1164,15 +1164,101 @@ CREATE TABLE audit_logs (
 **2% Remaining - Estimated: 3 days**
 
 1. **Enhanced Monitoring** (2% - 3 days)
-   - [ ] Add Grafana dashboard templates
-   - [ ] Implement custom metrics collectors
-   - [ ] Add alerting rules
-   - [ ] Create monitoring runbook
+   
+   **Grafana Dashboard Templates** (Day 1 - 8 hours)
+   - [ ] Download and install Grafana (https://grafana.com/grafana/download)
+   - [ ] Create `monitoring/grafana/dashboards/` directory
+   - [ ] Build workflow execution dashboard template:
+     * Workflow execution rate (executions per minute)
+     * Success/failure ratio pie chart
+     * Average execution duration over time
+     * Active workflows gauge
+   - [ ] Build agent performance dashboard template:
+     * Agent invocation frequency by type
+     * Agent error rates
+     * Agent response time percentiles (p50, p95, p99)
+   - [ ] Build system health dashboard template:
+     * CPU and memory usage graphs
+     * Request rate and latency
+     * Database connection pool status
+     * Active WebSocket connections
+   - [ ] Export dashboards as JSON: `workflow-metrics.json`, `agent-performance.json`, `system-health.json`
+   - [ ] Add README with import instructions
+   
+   **Custom Metrics Collectors** (Day 2 - 8 hours)
+   - [ ] Install `prom-client` package: `npm install prom-client`
+   - [ ] Create `src/monitoring/metrics-collector.ts`:
+     * Workflow execution counter (success/failure labels)
+     * Workflow duration histogram
+     * Agent invocation counter by agent type
+     * Active workflow gauge
+     * Database query duration histogram
+     * HTTP request duration histogram
+   - [ ] Create `src/monitoring/metrics-exporter.ts`:
+     * Implement `/metrics` endpoint for Prometheus scraping
+     * Format metrics in Prometheus exposition format
+   - [ ] Update `src/index.ts` to register metrics endpoint
+   - [ ] Add metrics collection calls in:
+     * Workflow execution start/end points
+     * Agent invocation wrappers
+     * Database query wrappers
+     * HTTP request handlers
+   
+   **Alerting Rules** (Day 3 - 4 hours)
+   - [ ] Create `monitoring/prometheus/alerts/` directory
+   - [ ] Define alert rules in `alerts.yml`:
+     * High error rate: >5% failed workflows in 5 minutes
+     * Slow execution: p95 workflow duration >60 seconds
+     * High agent errors: >10% agent failures in 5 minutes
+     * Database issues: Connection pool >80% utilization
+     * Memory pressure: >85% memory usage
+     * High latency: p95 request latency >2 seconds
+   - [ ] Configure alert channels (email, Slack webhook)
+   - [ ] Set up Prometheus alertmanager configuration
+   - [ ] Test alert firing with simulated failures
+   
+   **Monitoring Runbook** (Day 3 - 4 hours)
+   - [ ] Create `docs/operations/MONITORING_RUNBOOK.md` with:
+     * **Setup Instructions**:
+       - Prometheus installation and configuration
+       - Grafana installation and dashboard import
+       - Alertmanager setup
+     * **Dashboard Guide**:
+       - How to interpret each dashboard panel
+       - Common patterns and what they mean
+       - Troubleshooting dashboard issues
+     * **Alert Response Procedures**:
+       - High error rate: Check recent deployments, review error logs
+       - Slow execution: Identify slow agents, check database performance
+       - Database issues: Review connection pool, check query performance
+       - Memory pressure: Review memory leaks, restart if needed
+     * **Common Scenarios**:
+       - Workflow stuck: How to identify and resolve
+       - Agent failing: Debugging steps
+       - Database degradation: Performance tuning
+     * **Metrics Reference**:
+       - Complete list of exported metrics
+       - Metric meanings and units
+       - Example PromQL queries
+     * **Maintenance Tasks**:
+       - Daily: Review dashboards for anomalies
+       - Weekly: Check alert history
+       - Monthly: Update thresholds based on trends
 
 **Completion Status**: ✅ **98% SUBSTANTIAL**  
 **Achievement**: JWT auth, rate limiting, health checks, error handling, Docker orchestration, audit logging, webhooks
 
 **Note**: User authentication, multi-tenant workspaces, and secrets management have been moved to Phase 6 to consolidate all authentication and integration features.
+
+**Dependencies Required**:
+- `prom-client` (npm package for Prometheus metrics)
+- Grafana (external download: https://grafana.com/grafana/download)
+- Prometheus (external download: https://prometheus.io/download/)
+
+**Integration Points**:
+- Metrics endpoint: `GET /metrics` (Prometheus scraping)
+- Dashboard templates: Import into Grafana UI
+- Alert rules: Configure in Prometheus `prometheus.yml`
 
 ---
 
