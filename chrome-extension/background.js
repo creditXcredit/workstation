@@ -1,9 +1,18 @@
 /**
  * Workstation Chrome Extension - Background Service Worker
- * v2.1.0 - Phase 3 Complete: Auto-Update, Error Reporting, Enhanced MCP Sync
+ * v2.1.0 - Phase 3 Complete: Auto-Update, Error Reporting, Enhanced MCP Sync with Pako Compression
  * Handles JWT authentication and API communication with Workstation backend
  * Enterprise-grade browser automation with connection pooling and health monitoring
  */
+
+// Load pako compression library for service worker
+// Note: importScripts must be called before any ES6 imports in service workers
+try {
+  importScripts('lib/pako.min.js');
+  console.log('[Background] Pako compression library loaded');
+} catch (error) {
+  console.warn('[Background] Failed to load pako, compression will use fallback:', error);
+}
 
 // Import API Bridge
 import { getAPIBridge } from './api-bridge.js';

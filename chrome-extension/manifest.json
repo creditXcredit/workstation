@@ -42,6 +42,7 @@
     {
       "resources": [
         "injected-styles.css",
+        "lib/pako.min.js",
         "api-bridge.js",
         "agent-registry.js",
         "mcp-sync-manager.js",

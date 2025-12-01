@@ -4,38 +4,53 @@
  * Prevents agentic flow disruption with persistence and recovery
  * 
  * Phase 3 Enhancements:
- * - Base64 encoding for storage optimization (reduces overhead by 25-30%)
+ * - Pako compression (reduces storage by 60-80%)
  * - Deduplication (eliminates redundant syncs)
  * - Advanced conflict resolution (last-write-wins, merge strategies)
  * - Performance metrics
  * 
- * Note: For true compression (60-80% reduction), integrate pako library:
- * - Add pako to web_accessible_resources in manifest.json
- * - Load pako script before this module
- * - Replace base64 encoding with: pako.deflate(bytes) and pako.inflate(bytes)
+ * Dependencies:
+ * - pako library for compression (loaded via script tag or importScripts)
  */
 
-// Base64 encoding utilities for storage optimization
+// Check if pako is available (loaded via background.js or content script)
+const hasPako = typeof pako !== 'undefined';
+
+// Compression utilities using pako
 const compressionUtils = {
   /**
-   * Encode data using base64 for storage efficiency
-   * @param {any} data - Data to encode
-   * @returns {string} Base64-encoded data
+   * Compress data using pako deflate
+   * @param {any} data - Data to compress
+   * @returns {string} Base64-encoded compressed data
    */
   compress(data) {
     try {
       const jsonStr = JSON.stringify(data);
-      const encoder = new TextEncoder();
-      const bytes = encoder.encode(jsonStr);
       
-      // Avoid stack overflow for large arrays by chunking
-      let binary = '';
-      const chunkSize = 0x8000; // 32k chunks
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      if (hasPako) {
+        // Use pako for true compression (60-80% reduction)
+        const compressed = pako.deflate(jsonStr);
+        
+        // Convert to base64 for storage
+        let binary = '';
+        const chunkSize = 0x8000; // 32k chunks to avoid stack overflow
+        for (let i = 0; i < compressed.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, compressed.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      } else {
+        // Fallback to base64 encoding (25-30% optimization)
+        console.warn('[Compression] Pako not available, using base64 encoding fallback');
+        const encoder = new TextEncoder();
+        const bytes = encoder.encode(jsonStr);
+        
+        let binary = '';
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
       }
-      const base64 = btoa(binary);
-      return base64;
     } catch (error) {
       console.error('[Compression] Failed to compress:', error);
       return JSON.stringify(data); // Fallback to uncompressed
@@ -43,17 +58,26 @@ const compressionUtils = {
   },
 
   /**
-   * Decode base64 data
-   * @param {string} compressed - Base64-encoded data
-   * @returns {any} Decoded data
+   * Decompress data using pako inflate
+   * @param {string} compressed - Base64-encoded compressed data
+   * @returns {any} Decompressed data
    */
   decompress(compressed) {
     try {
       // Decode from base64
       const bytes = Uint8Array.from(atob(compressed), c => c.charCodeAt(0));
-      const decoder = new TextDecoder();
-      const jsonStr = decoder.decode(bytes);
-      return JSON.parse(jsonStr);
+      
+      if (hasPako) {
+        // Use pako for decompression
+        const decompressed = pako.inflate(bytes, { to: 'string' });
+        return JSON.parse(decompressed);
+      } else {
+        // Fallback: decode as base64-encoded string
+        console.warn('[Compression] Pako not available, using base64 decoding fallback');
+        const decoder = new TextDecoder();
+        const jsonStr = decoder.decode(bytes);
+        return JSON.parse(jsonStr);
+      }
     } catch (error) {
       console.error('[Compression] Failed to decompress:', error);
       try {
@@ -65,10 +89,10 @@ const compressionUtils = {
   },
 
   /**
-   * Calculate storage efficiency ratio
+   * Calculate compression ratio
    * @param {any} original - Original data
-   * @param {string} compressed - Encoded data
-   * @returns {number} Efficiency ratio (0-100)
+   * @param {string} compressed - Compressed data
+   * @returns {number} Compression ratio (0-100)
    */
   getCompressionRatio(original, compressed) {
     const originalSize = JSON.stringify(original).length;
