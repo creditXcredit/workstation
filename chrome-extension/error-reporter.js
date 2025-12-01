@@ -76,6 +76,12 @@ class ErrorReporter {
         return;
       }
 
+      // Validate DSN format (must be https://...@sentry.io/...)
+      if (!this.sentryDSN || !this.isValidDSN(this.sentryDSN)) {
+        console.error('[ErrorReporter] Invalid or missing Sentry DSN');
+        return;
+      }
+
       Sentry.init({
         dsn: this.sentryDSN,
         environment: this.environment,
@@ -432,6 +438,19 @@ class ErrorReporter {
         hasEmail: !!this.userContext.email
       } : null
     };
+  }
+
+  /**
+   * Validate Sentry DSN format
+   */
+  isValidDSN(dsn) {
+    try {
+      // DSN format: https://<key>@<host>/<project>
+      const dsnPattern = /^https:\/\/[a-f0-9]+@[a-z0-9.-]+\/[0-9]+$/i;
+      return dsnPattern.test(dsn);
+    } catch (error) {
+      return false;
+    }
   }
 
   /**

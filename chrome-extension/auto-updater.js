@@ -61,49 +61,60 @@ class AutoUpdater {
     try {
       console.log('[AutoUpdater] Checking for updates...');
       
-      const response = await fetch(`${this.backendUrl}/api/extension/version`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        signal: AbortSignal.timeout(10000)
-      });
+      // Create AbortController for timeout (better browser compatibility)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      
+      try {
+        const response = await fetch(`${this.backendUrl}/api/extension/version`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          signal: controller.signal
+        });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+        clearTimeout(timeoutId);
 
-      const versionInfo = await response.json();
-      const latestVersion = versionInfo.version;
-      const changelog = versionInfo.changelog || [];
-      const downloadUrl = versionInfo.downloadUrl;
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-      console.log(`[AutoUpdater] Latest version: ${latestVersion}, Current: ${this.currentVersion}`);
+        const versionInfo = await response.json();
+        const latestVersion = versionInfo.version;
+        const changelog = versionInfo.changelog || [];
+        const downloadUrl = versionInfo.downloadUrl;
 
-      // Compare versions
-      const updateAvailable = this.isNewerVersion(latestVersion, this.currentVersion);
+        console.log(`[AutoUpdater] Latest version: ${latestVersion}, Current: ${this.currentVersion}`);
 
-      if (updateAvailable) {
-        console.log(`[AutoUpdater] Update available: ${this.currentVersion} → ${latestVersion}`);
-        
-        // Notify user
-        await this.notifyUpdateAvailable(latestVersion, changelog, downloadUrl);
+        // Compare versions
+        const updateAvailable = this.isNewerVersion(latestVersion, this.currentVersion);
 
-        return {
-          success: true,
-          updateAvailable: true,
-          currentVersion: this.currentVersion,
-          latestVersion,
-          changelog,
-          downloadUrl
-        };
-      } else {
-        console.log('[AutoUpdater] Extension is up to date');
-        return {
-          success: true,
-          updateAvailable: false,
-          currentVersion: this.currentVersion
-        };
+        if (updateAvailable) {
+          console.log(`[AutoUpdater] Update available: ${this.currentVersion} → ${latestVersion}`);
+          
+          // Notify user
+          await this.notifyUpdateAvailable(latestVersion, changelog, downloadUrl);
+
+          return {
+            success: true,
+            updateAvailable: true,
+            currentVersion: this.currentVersion,
+            latestVersion,
+            changelog,
+            downloadUrl
+          };
+        } else {
+          console.log('[AutoUpdater] Extension is up to date');
+          return {
+            success: true,
+            updateAvailable: false,
+            currentVersion: this.currentVersion
+          };
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
       }
     } catch (error) {
       console.error('[AutoUpdater] Failed to check for updates:', error);

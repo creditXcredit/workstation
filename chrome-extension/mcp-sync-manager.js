@@ -167,11 +167,8 @@ class MCPSyncManager {
       // Handle compressed data
       if (result.compressed) {
         console.log('[MCPSyncManager] Decompressing stored data...');
-        const decompressed = compressionUtils.decompress(result.mcpSyncState);
-        if (decompressed) {
-          stateData = decompressed.mcpSyncState;
-          historyData = decompressed.mcpSyncHistory;
-        }
+        stateData = compressionUtils.decompress(result.mcpSyncState);
+        historyData = compressionUtils.decompress(result.mcpSyncHistory);
       }
 
       if (stateData) {
@@ -213,15 +210,20 @@ class MCPSyncManager {
 
       // Apply compression if enabled
       if (this.compressionEnabled) {
-        const originalSize = JSON.stringify(dataToStore).length;
-        const compressed = compressionUtils.compress(dataToStore);
-        const compressedSize = compressed.length;
+        const originalData = {
+          mcpSyncState: stateArray,
+          mcpSyncHistory: historySlice
+        };
+        const originalSize = JSON.stringify(originalData).length;
+        const compressedState = compressionUtils.compress(stateArray);
+        const compressedHistory = compressionUtils.compress(historySlice);
+        const compressedSize = compressedState.length + compressedHistory.length;
         
         dataToStore = {
-          mcpSyncState: compressed,
-          mcpSyncHistory: compressed,
+          mcpSyncState: compressedState,
+          mcpSyncHistory: compressedHistory,
           compressed: true,
-          compressionRatio: compressionUtils.getCompressionRatio(dataToStore, compressed)
+          compressionRatio: ((1 - compressedSize / originalSize) * 100).toFixed(1)
         };
 
         // Update compression stats
