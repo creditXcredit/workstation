@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { useQuery } from '@tantml:parameter>
+import { useQuery } from '@tanstack/react-query';
 import { AgentCard } from '../components/AgentCard';
 import { AgentDeployModal } from '../components/AgentDeployModal';
 
