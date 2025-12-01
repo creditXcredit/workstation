@@ -272,8 +272,8 @@ chrome-extension/
 ```json
 {
   "pako": "^2.1.0",                // Compression library
-  "@types/pako": "^2.0.3",         // TypeScript types
-  "@sentry/browser": "^7.91.0"     // Error reporting
+  "@types/pako": "^2.0.4",         // TypeScript types
+  "@sentry/browser": "^10.27.0"    // Error reporting
 }
 ```
 

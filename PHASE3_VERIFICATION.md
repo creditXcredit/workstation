@@ -108,8 +108,8 @@ Status:                                  EXCEEDED ✅
 ```json
 {
   "pako": "^2.1.0",
-  "@types/pako": "^2.0.3",
-  "@sentry/browser": "^7.91.0"
+  "@types/pako": "^2.0.4",
+  "@sentry/browser": "^10.27.0"
 }
 ```
 
