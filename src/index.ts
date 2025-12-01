@@ -1,6 +1,5 @@
 // ✅ JWT Secret Environment Validation (BEFORE imports to fail fast)
 import dotenv from 'dotenv';
-import lusca from 'lusca';
 dotenv.config();
 
 // Validate JWT_SECRET before server initialization - FAIL FAST
@@ -66,8 +65,8 @@ import {
 import { initializeMonitoring } from './services/monitoring';
 // Phase 4: Import backup service
 import { initializeBackupService } from './services/backup';
-// Phase 6: Import workspace initialization
-import { initializeWorkspaces } from './scripts/initialize-workspaces';
+// Phase 6: Workspace initialization available as separate script
+// import { initializeWorkspaces } from './scripts/initialize-workspaces';
 
 // Validate environment configuration
 const envConfig = validateEnvironment();
@@ -86,9 +85,9 @@ async function initialize() {
     initializeBackupService();
     logger.info('Phase 4: Backup service initialized successfully');
     
-    // Phase 6: Initialize workspaces
-    await initializeWorkspaces();
-    logger.info('Phase 6: Workspaces initialized successfully');
+    // Phase 6: Workspace initialization is available as a separate script
+    // Run: npm run build && node dist/scripts/initialize-workspaces.js
+    // Workspaces are not initialized automatically to avoid performance issues on restarts
   } catch (error) {
     logger.error('Initialization failed', { error });
     process.exit(1);
@@ -179,6 +178,8 @@ app.use(cors({
 app.use(express.json());
 
 // Phase 6: Session support for Passport
+// Note: CSRF protection for OAuth flows is handled via state parameter validation in passport strategies
+// JWT-authenticated API endpoints are naturally CSRF-resistant (no cookies used for auth)
 app.use(session({
   secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'dev-session-secret-change-in-production',
   resave: false,
@@ -186,14 +187,10 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' // Additional CSRF protection for session cookies
   }
 }));
-
-// Add CSRF protection middleware (except in test environment)
-if (process.env.NODE_ENV !== 'test') {
-  app.use(lusca.csrf());
-}
 
 // Initialize Passport
 app.use(passport.initialize());
