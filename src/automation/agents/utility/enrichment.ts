@@ -178,7 +178,10 @@ export class EnrichmentAgent {
         throw ErrorHandler.validationError('Domain is required', 'domain', params.domain);
       }
 
-      const domain = Validator.sanitizeUrl(params.domain, ['http', 'https']);
+      // Sanitize and extract clean domain
+      const sanitizedUrl = Validator.sanitizeUrl(params.domain, ['http', 'https']);
+      const cleanDomain = this.extractCleanDomain(sanitizedUrl);
+      
       const options: EnrichmentOptions = {
         timeout: 5000,
         retries: 3,
@@ -187,9 +190,9 @@ export class EnrichmentAgent {
       };
 
       // Check cache
-      const cacheKey = `company:${domain}`;
+      const cacheKey = `company:${cleanDomain}`;
       if (options.cacheResults && this.cache.has(cacheKey)) {
-        logger.info('Returning company data from cache', { domain });
+        logger.info('Returning company data from cache', { domain: cleanDomain });
         return {
           success: true,
           data: this.cache.get(cacheKey) as CompanyInfo
@@ -200,10 +203,7 @@ export class EnrichmentAgent {
       const result = await ErrorHandler.withRetry(
         () => ErrorHandler.withTimeout(
           async () => {
-            logger.info('Enriching company data', { domain });
-
-            // Extract clean domain
-            const cleanDomain = domain.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
+            logger.info('Enriching company data', { domain: cleanDomain });
 
             // Simulate company data enrichment
             // In production, this would use APIs like Clearbit, FullContact, or Hunter.io
@@ -225,11 +225,16 @@ export class EnrichmentAgent {
                 maxRedirects: 5
               });
 
-              // Parse basic meta information (simplified - production would use cheerio)
-              const html = websiteResponse.data;
-              const descriptionMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i);
-              if (descriptionMatch) {
-                companyInfo.description = descriptionMatch[1];
+              // Parse meta information using cheerio for robust HTML parsing
+              const cheerio = await import('cheerio');
+              const $ = cheerio.load(websiteResponse.data);
+              
+              // Extract description from meta tag
+              const description = $('meta[name="description"]').attr('content') || 
+                                $('meta[property="og:description"]').attr('content');
+              
+              if (description) {
+                companyInfo.description = description;
               }
             } catch (webError) {
               logger.warn('Could not fetch website metadata', { domain: cleanDomain });
@@ -253,7 +258,7 @@ export class EnrichmentAgent {
         this.cache.set(cacheKey, result);
       }
 
-      logger.info('Successfully enriched company data', { domain, name: result.name });
+      logger.info('Successfully enriched company data', { domain: cleanDomain, name: result.name });
 
       return {
         success: true,
@@ -329,7 +334,8 @@ export class EnrichmentAgent {
       try {
         const companyResult = await this.enrichCompanyData({ 
           domain, 
-          options: { ...options, cacheResults: false } 
+          // Respect the original cacheResults option to maintain consistency
+          options: { ...options, cacheResults: options.cacheResults } 
         });
         
         if (companyResult.success && companyResult.data) {
@@ -439,6 +445,14 @@ export class EnrichmentAgent {
       size: this.cache.size,
       entries: Array.from(this.cache.keys())
     };
+  }
+
+  /**
+   * Helper: Extract clean domain from URL
+   * Removes protocol, www, and path components
+   */
+  private extractCleanDomain(url: string): string {
+    return url.replace(/^(https?:\/\/)?(www\.)?/, '').split('/')[0];
   }
 
   /**

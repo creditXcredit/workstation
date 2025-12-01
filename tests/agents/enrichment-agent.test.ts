@@ -125,7 +125,8 @@ describe('Enrichment Agent Tests', () => {
 
       expect(result.success).toBe(true);
       if (result.data) {
-        expect(result.data.name).toContain('Stack');
+        // extractCompanyName transforms 'stackoverflow' to 'Stackoverflow'
+        expect(result.data.name).toBe('Stackoverflow');
       }
     }, 15000);
 
@@ -226,7 +227,8 @@ describe('Enrichment Agent Tests', () => {
       expect(result.success).toBe(true);
       if (result.data) {
         expect(result.data.company).toBeDefined();
-        expect(result.data.company).toContain('amazon');
+        // extractCompanyName capitalizes first letter: 'amazon' -> 'Amazon'
+        expect(result.data.company?.toLowerCase()).toContain('amazon');
       }
     }, 15000);
   });
