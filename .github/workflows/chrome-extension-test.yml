@@ -100,7 +100,7 @@ jobs:
           total_size=0
           for file in chrome-extension/**/*; do
             if [ -f "$file" ]; then
-              size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")
+              size=$(stat -c%s "$file")
               total_size=$((total_size + size))
             fi
           done
@@ -224,7 +224,7 @@ jobs:
             const page = pages[0];
             
             // Wait for extension to load
-            await page.waitForTimeout(3000);
+            await new Promise(resolve => setTimeout(resolve, 3000));
             
             // Check for errors
             const errors = [];
@@ -235,7 +235,7 @@ jobs:
             });
             
             await page.goto('chrome://extensions/');
-            await page.waitForTimeout(2000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
             
             console.log('✅ Extension loaded successfully');
             

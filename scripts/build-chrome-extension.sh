@@ -80,11 +80,12 @@ if [ ${#MISSING_FILES[@]} -gt 0 ]; then
 fi
 
 # Step 7: Create ZIP package
-cd ..
 echo "📦 Creating ZIP package..."
-cd chrome-extension
+# We're already in $BUILD_DIR from step 4
+# Create the zip from here
 zip -r "../../${OUTPUT_ZIP}" . -x "*.DS_Store" -x "__MACOSX/*" -x "*.git/*" -q
 
+# Return to root directory
 cd ../..
 
 # Step 8: Verify ZIP contents

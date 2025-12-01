@@ -21,6 +21,7 @@ class ErrorReporter {
     this.maxQueueSize = 100;
     this.userContext = null;
     this.enabled = true;
+    this.captureConsoleErrors = false; // Opt-in for console error capture
     this.environment = 'production';
     this.release = chrome.runtime.getManifest().version;
     this.errorStats = {
@@ -39,13 +40,17 @@ class ErrorReporter {
       this.sentryDSN = config.sentryDSN || null;
       this.environment = config.environment || 'production';
       this.enabled = config.enabled !== false;
+      this.captureConsoleErrors = config.captureConsoleErrors || false;
 
       // Load user context
       await this.loadUserContext();
 
       // Initialize Sentry if DSN provided
       if (this.sentryDSN && typeof Sentry !== 'undefined') {
-        this.initializeSentry();
+        const initResult = this.initializeSentry();
+        if (!initResult.success) {
+          console.warn('[ErrorReporter] Sentry initialization failed, continuing in local mode');
+        }
       } else {
         console.log('[ErrorReporter] Running without Sentry integration (local mode)');
       }
@@ -73,13 +78,14 @@ class ErrorReporter {
     try {
       if (typeof Sentry === 'undefined') {
         console.warn('[ErrorReporter] Sentry SDK not loaded');
-        return;
+        return { success: false, reason: 'SDK not loaded' };
       }
 
       // Validate DSN format (must be https://...@sentry.io/...)
       if (!this.sentryDSN || !this.isValidDSN(this.sentryDSN)) {
-        console.error('[ErrorReporter] Invalid or missing Sentry DSN');
-        return;
+        const errMsg = '[ErrorReporter] Invalid or missing Sentry DSN - error reporting will use local queue only';
+        console.error(errMsg);
+        return { success: false, reason: 'Invalid DSN' };
       }
 
       Sentry.init({
@@ -109,8 +115,10 @@ class ErrorReporter {
 
       this.sentryInitialized = true;
       console.log('[ErrorReporter] Sentry initialized');
+      return { success: true };
     } catch (error) {
       console.error('[ErrorReporter] Sentry initialization failed:', error);
+      return { success: false, reason: error.message };
     }
   }
 
@@ -137,15 +145,18 @@ class ErrorReporter {
       });
     });
 
-    // Capture console errors
-    const originalConsoleError = console.error;
-    console.error = (...args) => {
-      this.captureError(new Error(args.join(' ')), {
-        type: 'console_error',
-        args: args
-      });
-      originalConsoleError.apply(console, args);
-    };
+    // Capture console errors (opt-in)
+    if (this.captureConsoleErrors) {
+      const originalConsoleError = console.error;
+      console.error = (...args) => {
+        this.captureError(new Error(args.join(' ')), {
+          type: 'console_error',
+          args: args
+        });
+        originalConsoleError.apply(console, args);
+      };
+      console.log('[ErrorReporter] Console error capture enabled');
+    }
 
     console.log('[ErrorReporter] Global error handlers installed');
   }

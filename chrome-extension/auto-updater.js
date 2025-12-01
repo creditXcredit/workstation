@@ -13,7 +13,7 @@
 class AutoUpdater {
   constructor() {
     this.currentVersion = chrome.runtime.getManifest().version;
-    this.backendUrl = 'http://localhost:3000';
+    this.backendUrl = null; // Will be loaded from storage or default
     this.checkInterval = 3600000; // 1 hour
     this.updateCheckTimer = null;
     this.updateHistory = [];
@@ -27,6 +27,9 @@ class AutoUpdater {
    */
   async initialize() {
     try {
+      // Load backend URL from storage or use default
+      await this.loadBackendUrl();
+
       // Load update history
       await this.loadUpdateHistory();
 
@@ -41,10 +44,40 @@ class AutoUpdater {
 
       console.log('[AutoUpdater] Initialized successfully');
       console.log(`[AutoUpdater] Current version: ${this.currentVersion}`);
+      console.log(`[AutoUpdater] Backend URL: ${this.backendUrl}`);
       
       return { success: true, version: this.currentVersion };
     } catch (error) {
       console.error('[AutoUpdater] Initialization failed:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Load backend URL from storage or use default
+   */
+  async loadBackendUrl() {
+    try {
+      const result = await chrome.storage.local.get('backendUrl');
+      this.backendUrl = result.backendUrl || 'http://localhost:3000';
+      console.log(`[AutoUpdater] Backend URL loaded: ${this.backendUrl}`);
+    } catch (error) {
+      console.error('[AutoUpdater] Failed to load backend URL:', error);
+      this.backendUrl = 'http://localhost:3000'; // Fallback to default
+    }
+  }
+
+  /**
+   * Set backend URL (for configuration)
+   */
+  async setBackendUrl(url) {
+    try {
+      this.backendUrl = url;
+      await chrome.storage.local.set({ backendUrl: url });
+      console.log(`[AutoUpdater] Backend URL updated: ${url}`);
+      return { success: true };
+    } catch (error) {
+      console.error('[AutoUpdater] Failed to set backend URL:', error);
       return { success: false, error: error.message };
     }
   }
