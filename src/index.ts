@@ -1,5 +1,6 @@
 // ✅ JWT Secret Environment Validation (BEFORE imports to fail fast)
 import dotenv from 'dotenv';
+import lusca from 'lusca';
 dotenv.config();
 
 // Validate JWT_SECRET before server initialization - FAIL FAST
@@ -188,6 +189,11 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
+
+// Add CSRF protection middleware (except in test environment)
+if (process.env.NODE_ENV !== 'test') {
+  app.use(lusca.csrf());
+}
 
 // Initialize Passport
 app.use(passport.initialize());
