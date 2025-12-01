@@ -27,7 +27,13 @@ const compressionUtils = {
       
       // Simulate compression by storing as base64
       // In production, this would use: pako.deflate(bytes)
-      const base64 = btoa(String.fromCharCode.apply(null, bytes));
+      // Avoid stack overflow for large arrays by chunking
+      let binary = '';
+      const chunkSize = 0x8000; // 32k chunks
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+      }
+      const base64 = btoa(binary);
       return base64;
     } catch (error) {
       console.error('[Compression] Failed to compress:', error);
