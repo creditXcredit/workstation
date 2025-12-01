@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Workstation AI Agent",
-  "version": "2.0.0",
-  "description": "Enterprise browser automation with 25+ AI agents and MCP sync",
+  "version": "2.1.0",
+  "description": "Enterprise browser automation with 25+ AI agents, MCP sync, and auto-update",
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "notifications"
   ],
   "host_permissions": [
     "<all_urls>",
@@ -44,6 +45,8 @@
         "api-bridge.js",
         "agent-registry.js",
         "mcp-sync-manager.js",
+        "auto-updater.js",
+        "error-reporter.js",
         "playwright/auto-wait.js",
         "playwright/network.js",
         "playwright/retry.js",
