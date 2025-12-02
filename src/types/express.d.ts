@@ -2,8 +2,6 @@
  * Express type augmentation for Passport and JWT
  */
 
-import { JWTPayload } from '../auth/jwt';
-
 declare global {
   namespace Express {
     // Passport User type - compatible with JWTPayload
