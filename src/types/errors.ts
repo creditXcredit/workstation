@@ -143,7 +143,7 @@ export function validatePassword(
 ): PasswordValidationResult {
   const errors: string[] = [];
   
-  // Trim to avoid whitespace-only passwords
+  // Trim to avoid whitespace-only passwords and use trimmed version for all checks
   const trimmed = password.trim();
   
   if (trimmed.length === 0) {
@@ -158,34 +158,34 @@ export function validatePassword(
     errors.push(`Password must be at least ${rules.minLength} characters long`);
   }
   
-  if (rules.requireUppercase && !/[A-Z]/.test(password)) {
+  if (rules.requireUppercase && !/[A-Z]/.test(trimmed)) {
     errors.push('Password must contain at least one uppercase letter');
   }
   
-  if (rules.requireLowercase && !/[a-z]/.test(password)) {
+  if (rules.requireLowercase && !/[a-z]/.test(trimmed)) {
     errors.push('Password must contain at least one lowercase letter');
   }
   
-  if (rules.requireNumber && !/\d/.test(password)) {
+  if (rules.requireNumber && !/\d/.test(trimmed)) {
     errors.push('Password must contain at least one number');
   }
   
-  if (rules.requireSpecialChar && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+  if (rules.requireSpecialChar && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(trimmed)) {
     errors.push('Password must contain at least one special character');
   }
   
-  // Calculate strength
+  // Calculate strength using trimmed password
   let strength: 'weak' | 'fair' | 'good' | 'strong' = 'weak';
-  const hasUpper = /[A-Z]/.test(password);
-  const hasLower = /[a-z]/.test(password);
-  const hasNumber = /\d/.test(password);
-  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+  const hasUpper = /[A-Z]/.test(trimmed);
+  const hasLower = /[a-z]/.test(trimmed);
+  const hasNumber = /\d/.test(trimmed);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(trimmed);
   const criteriaCount = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
   
   if (errors.length === 0) {
-    if (password.length >= 12 && criteriaCount === 4) {
+    if (trimmed.length >= 12 && criteriaCount === 4) {
       strength = 'strong';
-    } else if (password.length >= 10 && criteriaCount >= 3) {
+    } else if (trimmed.length >= 10 && criteriaCount >= 3) {
       strength = 'good';
     } else {
       strength = 'fair';
