@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed - Upgraded nodemailer to 7.0.11 (2025-12-02)
+
+#### Dependencies
+- **nodemailer** - Upgraded from 7.0.10 to 7.0.11
+  - Includes latest security patches and bug fixes
+  - Maintains API compatibility (minor version bump)
+
+#### Context
+- Addresses review comment from PR #295
+- No breaking changes expected
+
 ### Changed - README.md Updated to Reflect Phase 5/7/8 Completion (2025-11-29)
 
 #### Documentation Updates
