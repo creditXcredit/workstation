@@ -8,9 +8,6 @@ import { WebClient } from '@slack/web-api';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
 
-// Initialize Slack app (will be configured per workspace)
-const slackApp: App | null = null;
-
 interface SlackWorkspaceConfig {
   workspaceId: string;
   slackTeamId: string;
@@ -509,5 +506,3 @@ export async function sendSlackMessage(
     throw error;
   }
 }
-
-export { slackApp };

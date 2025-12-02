@@ -9,6 +9,11 @@ import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
 import { initializeSlackApp } from '../services/slack';
+import { 
+  ErrorCode, 
+  createErrorResponse, 
+  createSuccessResponse 
+} from '../types/errors';
 
 const router = Router();
 
@@ -290,6 +295,7 @@ router.delete('/disconnect/:workspaceId', authenticateToken, async (req: Authent
 router.post('/test/:workspaceId', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { workspaceId } = req.params;
+    const requestId = (req as any).requestId;
 
     // Verify user has access
     const accessCheck = await db.query(
@@ -299,46 +305,131 @@ router.post('/test/:workspaceId', authenticateToken, async (req: AuthenticatedRe
     );
 
     if (accessCheck.rows.length === 0) {
-      return res.status(403).json({
-        success: false,
-        error: 'Access denied'
-      });
+      return res.status(403).json(
+        createErrorResponse(
+          ErrorCode.WORKSPACE_ACCESS_DENIED,
+          'You do not have access to this workspace',
+          {
+            requestId,
+            nextSteps: [
+              'Request access from the workspace owner',
+              'Verify you are logged in with the correct account'
+            ]
+          }
+        )
+      );
     }
 
     // Get Slack bot token
     const result = await db.query(
-      'SELECT slack_bot_token, slack_channel FROM workspaces WHERE id = $1',
+      'SELECT slack_bot_token, slack_channel, slack_team_id, name FROM workspaces WHERE id = $1',
       [workspaceId]
     );
 
     if (result.rows.length === 0 || !result.rows[0].slack_bot_token) {
-      return res.status(400).json({
-        success: false,
-        error: 'Slack is not connected to this workspace'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.SLACK_INTEGRATION_ERROR,
+          'Slack is not connected to this workspace',
+          {
+            requestId,
+            nextSteps: [
+              'Connect Slack via OAuth in workspace settings',
+              'Contact workspace administrator to set up Slack integration'
+            ]
+          }
+        )
+      );
     }
 
-    const { slack_bot_token, slack_channel } = result.rows[0];
+    const { slack_bot_token, slack_channel, slack_team_id, name: workspaceName } = result.rows[0];
+    const targetChannel = slack_channel || '#general';
 
     // Send test message
     const client = new WebClient(slack_bot_token);
-    await client.chat.postMessage({
-      channel: slack_channel || '#general',
-      text: '✅ Slack integration is working! This is a test message from Workstation.'
+    const messageResult = await client.chat.postMessage({
+      channel: targetChannel,
+      text: `✅ Slack integration is working! This is a test message from ${workspaceName} workspace.`,
+      blocks: [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*✅ Slack Integration Test Successful*\n\nYour Slack integration for *${workspaceName}* workspace is working correctly!`
+          }
+        },
+        {
+          type: 'context',
+          elements: [
+            {
+              type: 'mrkdwn',
+              text: `Workspace: ${workspaceName} | Team ID: ${slack_team_id} | Sent at: ${new Date().toISOString()}`
+            }
+          ]
+        }
+      ]
     });
 
-    logger.info('Slack test message sent', { workspaceId });
-
-    res.json({
-      success: true,
-      message: 'Test message sent successfully'
+    logger.info('Slack test message sent', { 
+      workspaceId, 
+      channel: targetChannel,
+      messageTs: messageResult.ts 
     });
+
+    res.json(
+      createSuccessResponse(
+        {
+          channel: targetChannel,
+          teamId: slack_team_id,
+          messageTimestamp: messageResult.ts,
+          testPassed: true
+        },
+        {
+          message: `Test message sent successfully to ${targetChannel}`,
+          requestId
+        }
+      )
+    );
   } catch (error) {
-    logger.error('Slack test error', { error });
-    res.status(500).json({
-      success: false,
-      error: 'Failed to send test message'
-    });
+    logger.error('Slack test error', { error, workspaceId: req.params.workspaceId });
+    
+    // Provide more specific error based on error type
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const isAuthError = errorMessage.includes('invalid_auth') || errorMessage.includes('token');
+    const isChannelError = errorMessage.includes('channel_not_found') || errorMessage.includes('is_archived');
+    
+    let errorCode = ErrorCode.SLACK_INTEGRATION_ERROR;
+    let nextSteps = [
+      'Try again in a few moments',
+      'Verify Slack integration is still connected',
+      'Reconnect Slack if the problem persists'
+    ];
+    
+    if (isAuthError) {
+      nextSteps = [
+        'Reconnect Slack integration (OAuth token may have expired)',
+        'Contact workspace administrator to refresh Slack connection'
+      ];
+    } else if (isChannelError) {
+      nextSteps = [
+        'Verify the Slack channel exists and is not archived',
+        'Update the Slack channel in workspace settings',
+        'Use a different channel for notifications'
+      ];
+    }
+    
+    res.status(500).json(
+      createErrorResponse(
+        errorCode,
+        'Failed to send test message to Slack',
+        {
+          details: errorMessage,
+          requestId: (req as any).requestId,
+          retryable: !isAuthError,
+          nextSteps
+        }
+      )
+    );
   }
 });
 
