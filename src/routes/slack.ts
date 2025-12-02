@@ -145,6 +145,7 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
     });
 
     // Initialize Slack app for this workspace
+    let appInitialized = false;
     if (result.access_token && process.env.SLACK_SIGNING_SECRET) {
       try {
         initializeSlackApp({
@@ -153,15 +154,20 @@ router.get('/oauth/callback', async (req: Request, res: Response) => {
           botToken: result.access_token,
           signingSecret: process.env.SLACK_SIGNING_SECRET
         });
+        appInitialized = true;
       } catch (error) {
         logger.error('Failed to initialize Slack app', { error, workspaceId });
+        // Continue - credentials are saved, app can be initialized later
       }
     }
 
-    res.redirect(`/settings/integrations?success=slack_connected`);
+    // Redirect with success message and status
+    const status = appInitialized ? 'connected' : 'connected_pending';
+    res.redirect(`/settings/integrations?success=slack_${status}&team=${result.team?.name || 'Unknown'}`);
   } catch (error) {
     logger.error('Slack OAuth callback error', { error });
-    res.redirect(`/settings/integrations?error=slack_oauth_failed`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    res.redirect(`/settings/integrations?error=slack_oauth_failed&details=${encodeURIComponent(errorMessage)}`);
   }
 });
 
