@@ -12,6 +12,12 @@ import passport from '../auth/passport';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
 import { sendPasswordResetEmail } from '../services/email';
+import { 
+  ErrorCode, 
+  createErrorResponse, 
+  createSuccessResponse, 
+  validatePassword 
+} from '../types/errors';
 
 const router = Router();
 
@@ -25,27 +31,51 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Email and password are required',
+          {
+            nextSteps: ['Provide both email and password to register']
+          }
+        )
+      );
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid email format'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.INVALID_EMAIL_FORMAT,
+          'Invalid email format',
+          {
+            field: 'email',
+            nextSteps: ['Use a valid email address (e.g., user@example.com)']
+          }
+        )
+      );
     }
 
     // Password strength validation
-    if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 8 characters long'
-      });
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.WEAK_PASSWORD,
+          'Password does not meet security requirements',
+          {
+            field: 'password',
+            details: passwordValidation.errors.join('. '),
+            nextSteps: [
+              'Use at least 8 characters',
+              'Include uppercase and lowercase letters',
+              'Include at least one number',
+              'Include at least one special character (!@#$%^&*)'
+            ]
+          }
+        )
+      );
     }
 
     // Check if user exists
@@ -55,10 +85,20 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     if (existingUser.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        error: 'User already exists'
-      });
+      return res.status(409).json(
+        createErrorResponse(
+          ErrorCode.USER_ALREADY_EXISTS,
+          'An account with this email already exists',
+          {
+            field: 'email',
+            nextSteps: [
+              'Try logging in instead',
+              'Use password reset if you forgot your password',
+              'Contact support if you need help accessing your account'
+            ]
+          }
+        )
+      );
     }
 
     // Hash password
@@ -227,6 +267,158 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res:
       success: false,
       error: 'Logout failed'
     });
+  }
+});
+
+/**
+ * Change password (authenticated users)
+ * POST /api/auth/change-password
+ */
+router.post('/change-password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.userId;
+    const requestId = req.requestId;
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Current password and new password are required',
+          {
+            requestId,
+            nextSteps: ['Provide both current and new password']
+          }
+        )
+      );
+    }
+
+    // Validate new password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.WEAK_PASSWORD,
+          'New password does not meet security requirements',
+          {
+            field: 'newPassword',
+            details: passwordValidation.errors.join('. '),
+            requestId,
+            nextSteps: [
+              'Use at least 8 characters',
+              'Include uppercase and lowercase letters',
+              'Include at least one number',
+              'Include at least one special character (!@#$%^&*)'
+            ]
+          }
+        )
+      );
+    }
+
+    // Get current user
+    const userResult = await db.query(
+      'SELECT id, email, password_hash FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json(
+        createErrorResponse(
+          ErrorCode.USER_NOT_FOUND,
+          'User not found',
+          {
+            requestId,
+            nextSteps: ['Please login again']
+          }
+        )
+      );
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json(
+        createErrorResponse(
+          ErrorCode.INVALID_CREDENTIALS,
+          'Current password is incorrect',
+          {
+            field: 'currentPassword',
+            requestId,
+            retryable: true,
+            nextSteps: [
+              'Check your current password',
+              'Use password reset if you forgot your password'
+            ]
+          }
+        )
+      );
+    }
+
+    // Check if new password is same as current
+    const samePassword = await bcrypt.compare(newPassword, user.password_hash);
+    if (samePassword) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.INVALID_INPUT_FORMAT,
+          'New password must be different from current password',
+          {
+            field: 'newPassword',
+            requestId,
+            nextSteps: ['Choose a different password']
+          }
+        )
+      );
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [newPasswordHash, userId]
+    );
+
+    // Invalidate all other sessions (optional security measure)
+    const currentToken = req.headers.authorization?.split(' ')[1];
+    await db.query(
+      'UPDATE user_sessions SET is_valid = false WHERE user_id = $1 AND token != $2',
+      [userId, currentToken]
+    );
+
+    logger.info('Password changed successfully', { userId, email: user.email });
+
+    res.json(
+      createSuccessResponse(
+        {
+          message: 'Password changed successfully',
+          sessionsInvalidated: true
+        },
+        {
+          message: 'Your password has been updated. All other sessions have been logged out for security.',
+          requestId
+        }
+      )
+    );
+  } catch (error) {
+    logger.error('Password change error', { error, userId: req.user?.userId });
+    res.status(500).json(
+      createErrorResponse(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        'Failed to change password',
+        {
+          requestId: req.requestId,
+          retryable: true,
+          nextSteps: [
+            'Try again in a few moments',
+            'Contact support if the problem persists'
+          ]
+        }
+      )
+    );
   }
 });
 
