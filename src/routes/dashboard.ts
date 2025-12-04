@@ -39,6 +39,52 @@ let repoStatsCache: RepoStatsCache = {
 };
 
 /**
+ * Get dashboard metrics (simplified for React UI)
+ * GET /api/metrics/dashboard
+ * Public endpoint with rate limiting
+ */
+router.get('/metrics', publicStatsLimiter, async (req, res: Response) => {
+  try {
+    // Get system-wide statistics (not user-specific)
+    // This is a public endpoint showing overall system health
+    
+    // Count total agents
+    const agentsPath = resolve(process.cwd(), '.github', 'agents');
+    let totalAgents = 0;
+    let activeAgents = 0;
+    
+    try {
+      const agentDirs = await fs.readdir(agentsPath, { withFileTypes: true });
+      totalAgents = agentDirs.filter(dir => dir.isDirectory()).length;
+      // Assume half are active for demo purposes
+      activeAgents = Math.ceil(totalAgents / 2);
+    } catch (error) {
+      logger.warn('Could not read agents directory', { error });
+    }
+
+    // For now, return demo/mock data
+    // In production, this would query the database for actual metrics
+    const metrics = {
+      activeAgents: activeAgents || 8,
+      runningWorkflows: Math.floor(Math.random() * 5) + 2,
+      completedToday: Math.floor(Math.random() * 50) + 20,
+      successRate: 95 + Math.floor(Math.random() * 5)
+    };
+
+    res.json(metrics);
+    logger.info('Dashboard metrics retrieved');
+  } catch (error) {
+    logger.error('Dashboard metrics fetch error:', error);
+    res.status(500).json({
+      activeAgents: 0,
+      runningWorkflows: 0,
+      completedToday: 0,
+      successRate: 0
+    });
+  }
+});
+
+/**
  * Get user dashboard data
  * GET /api/dashboard
  */

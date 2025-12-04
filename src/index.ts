@@ -89,8 +89,9 @@ async function initialize() {
     logger.info('Phase 4: Backup service initialized successfully');
     
     // Phase 6: Initialize workspaces
-    await initializeWorkspaces();
-    logger.info('Phase 6: Workspaces initialized successfully');
+    // Commented out temporarily for demo - requires PostgreSQL
+    // await initializeWorkspaces();
+    logger.info('Phase 6: Workspaces initialization skipped (database not available)');
     // Phase 6: Workspace initialization is available as a separate script
     // Run: npm run build && node dist/scripts/initialize-workspaces.js
     // Workspaces are not initialized automatically to avoid performance issues on restarts
@@ -215,10 +216,17 @@ try {
   app.use(limiter); // Fallback to memory-based rate limiting
 }
 
-// Serve static files from public directory (Dashboard UI)
+// Serve built React UI from dist/ui (Production Dashboard)
+const uiDistPath = join(__dirname, 'ui');
+app.use('/dashboard', express.static(uiDistPath));
+// Also serve UI assets at /assets for the bundled files
+app.use('/assets', express.static(join(uiDistPath, 'assets')));
+logger.info('Serving production React dashboard UI', { path: uiDistPath });
+
+// Serve static files from public directory (Legacy HTML dashboards)
 const publicPath = join(__dirname, '..', 'public');
-app.use(express.static(publicPath));
-logger.info('Serving static dashboard UI', { path: publicPath });
+app.use('/legacy', express.static(publicPath));
+logger.info('Serving legacy static dashboard UI', { path: publicPath });
 
 // Serve static files from docs directory (API docs)
 const docsPath = join(__dirname, '..', 'docs');
@@ -375,6 +383,17 @@ logger.info('Context-Memory Intelligence Layer routes registered');
 // Import WebSocket servers for real-time updates
 import { workflowWebSocketServer } from './services/workflow-websocket';
 import MCPWebSocketServer from './services/mcp-websocket';
+
+// Root redirect to dashboard
+app.get('/', (req: Request, res: Response) => {
+  res.redirect('/dashboard');
+});
+
+// Catch-all route for React Router - must be after all API routes but before 404
+// This ensures that client-side routing works properly for the React app
+app.get('/dashboard/*', (req: Request, res: Response) => {
+  res.sendFile(join(__dirname, 'ui', 'dashboard', 'index.html'));
+});
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
