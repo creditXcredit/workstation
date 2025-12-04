@@ -34,7 +34,7 @@ jobs:
       space_saved: ${{ steps.calculate.outputs.space_saved }}
     
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       
       - name: Get GitHub Container Registry token
         id: get_token
