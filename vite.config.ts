@@ -10,9 +10,10 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: {
-        main: path.resolve(__dirname, 'src/ui/index.html'),
+        // Only dashboard has an index.html file currently
+        // workflow-builder components are used within dashboard
+        // To add standalone workflow-builder, create src/ui/workflow-builder/index.html
         dashboard: path.resolve(__dirname, 'src/ui/dashboard/index.html'),
-        workflow: path.resolve(__dirname, 'src/ui/workflow-builder/index.html'),
       },
     },
   },
