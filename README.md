@@ -54,6 +54,19 @@ Workstation is a **production-ready** browser automation platform that combines:
 
 ---
 
+## 📚 **NEW! Business User Guides**
+
+**For Non-Technical Users:**
+- 📘 **[Business User Deployment Guide](DEPLOYMENT_GUIDE_FOR_BUSINESS_USERS.md)** - Complete step-by-step setup for business professionals (no coding required!)
+- 📄 **[Quick Start Card](QUICK_START_CARD.md)** - One-page printable reference
+- 🎥 **[Video Tutorial Script](VIDEO_TUTORIAL_SCRIPT.md)** - Follow-along video guide (10 minutes)
+
+**For Developers:**
+- 🔧 **[UI Integration Guide](UI_INTEGRATION_GUIDE.md)** - Technical integration documentation
+- ✅ **[Task Completion Summary](TASK_COMPLETION_UI_INTEGRATION.md)** - Implementation details
+
+---
+
 ## 🚀 Quick Start (30 seconds)
 
 ```bash
