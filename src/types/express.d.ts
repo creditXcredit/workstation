@@ -2,9 +2,6 @@
  * Express type augmentation for Passport and JWT
  */
 
-// Note: JWTPayload is referenced in comments for documentation
-// import { JWTPayload } from '../auth/jwt';
-
 declare global {
   namespace Express {
     // Passport User type - compatible with JWTPayload
@@ -19,6 +16,11 @@ declare global {
       github_username?: string;
       avatar_url?: string;
       [key: string]: string | number | boolean | undefined;
+    }
+    
+    // Request extensions
+    interface Request {
+      requestId?: string;
     }
   }
 }

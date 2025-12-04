@@ -2,6 +2,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+import lusca from 'lusca';
 // Validate JWT_SECRET before server initialization - FAIL FAST
 // Skip this check in test environment to allow tests to run
 if (process.env.NODE_ENV !== 'test' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'changeme')) {
@@ -65,6 +66,8 @@ import {
 import { initializeMonitoring } from './services/monitoring';
 // Phase 4: Import backup service
 import { initializeBackupService } from './services/backup';
+// Phase 6: Import workspace initialization
+import { initializeWorkspaces } from './scripts/initialize-workspaces';
 // Phase 6: Workspace initialization available as separate script
 // import { initializeWorkspaces } from './scripts/initialize-workspaces';
 
@@ -85,6 +88,9 @@ async function initialize() {
     initializeBackupService();
     logger.info('Phase 4: Backup service initialized successfully');
     
+    // Phase 6: Initialize workspaces
+    await initializeWorkspaces();
+    logger.info('Phase 6: Workspaces initialized successfully');
     // Phase 6: Workspace initialization is available as a separate script
     // Run: npm run build && node dist/scripts/initialize-workspaces.js
     // Workspaces are not initialized automatically to avoid performance issues on restarts
@@ -191,6 +197,9 @@ app.use(session({
     sameSite: 'lax' // Additional CSRF protection for session cookies
   }
 }));
+
+// CSRF protection for session-authenticated routes
+app.use(lusca.csrf());
 
 // Initialize Passport
 app.use(passport.initialize());
@@ -331,6 +340,14 @@ logger.info('Backup management routes registered');
 
 // Phase 4: Workflow state management routes
 app.use('/api/workflow-state', workflowStateRoutes);
+
+// Phase 6: Workspace management routes
+app.use('/api/workspaces', workspacesRoutes);
+logger.info('Phase 6: Workspace management routes registered');
+
+// Phase 6: Slack integration routes
+app.use('/api/slack', slackRoutes);
+logger.info('Phase 6: Slack integration routes registered');
 logger.info('Workflow state management routes registered');
 
 // Phase 6: Workspace management routes

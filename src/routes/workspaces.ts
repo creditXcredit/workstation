@@ -9,6 +9,11 @@ import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, AuthenticatedRequest } from '../auth/jwt';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
+import { 
+  ErrorCode, 
+  createErrorResponse, 
+  createSuccessResponse 
+} from '../types/errors';
 
 const router = Router();
 
@@ -83,10 +88,15 @@ router.post('/:slug/login', async (req: Request, res: Response) => {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Username and password are required'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Username and password are required',
+          {
+            nextSteps: ['Provide workspace credentials to login']
+          }
+        )
+      );
     }
 
     const result = await db.query(
@@ -97,44 +107,82 @@ router.post('/:slug/login', async (req: Request, res: Response) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Workspace not found'
-      });
+      return res.status(404).json(
+        createErrorResponse(
+          ErrorCode.WORKSPACE_NOT_FOUND,
+          `Workspace '${slug}' not found`,
+          {
+            details: 'The workspace slug may be incorrect or the workspace may have been deleted',
+            nextSteps: [
+              'Check the workspace slug for typos',
+              'Contact your administrator for the correct workspace name',
+              'Visit /api/workspaces to see available workspaces'
+            ]
+          }
+        )
+      );
     }
 
     const workspace = result.rows[0];
 
     // Check if workspace is already activated
     if (workspace.is_activated) {
-      return res.status(400).json({
-        success: false,
-        error: 'Workspace is already activated. Please use SSO login.',
-        requiresSSO: true
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.WORKSPACE_ALREADY_ACTIVATED,
+          'This workspace has been activated and requires personal credentials',
+          {
+            details: 'Generic credentials are disabled once a workspace is activated',
+            nextSteps: [
+              'Use your personal email and password to login',
+              'Contact the workspace owner if you need access',
+              'Use password reset if you forgot your password'
+            ]
+          }
+        )
+      );
     }
 
     // Verify generic credentials
     if (username !== workspace.generic_username) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
+      return res.status(401).json(
+        createErrorResponse(
+          ErrorCode.INVALID_WORKSPACE_CREDENTIALS,
+          'Invalid credentials',
+          {
+            retryable: true,
+            nextSteps: [
+              'Check your username and password',
+              'Contact your administrator for credentials',
+              'Ensure you are using the generic workspace credentials, not personal credentials'
+            ]
+          }
+        )
+      );
     }
 
     const validPassword = await bcrypt.compare(password, workspace.generic_password_hash);
     if (!validPassword) {
-      return res.status(401).json({
-        success: false,
-        error: 'Invalid credentials'
-      });
+      return res.status(401).json(
+        createErrorResponse(
+          ErrorCode.INVALID_WORKSPACE_CREDENTIALS,
+          'Invalid credentials',
+          {
+            retryable: true,
+            nextSteps: [
+              'Check your username and password',
+              'Contact your administrator for credentials',
+              'Ensure you are using the generic workspace credentials, not personal credentials'
+            ]
+          }
+        )
+      );
     }
 
     logger.info('Workspace generic login successful', { workspaceId: workspace.id, slug });
 
-    res.json({
-      success: true,
-      data: {
+    res.json(
+      createSuccessResponse({
         workspace: {
           id: workspace.id,
           name: workspace.name,
@@ -142,15 +190,31 @@ router.post('/:slug/login', async (req: Request, res: Response) => {
           isActivated: workspace.is_activated
         },
         requiresActivation: true,
-        message: 'Please activate your workspace by setting up your email and password'
-      }
-    });
+        activationUrl: `/api/workspaces/${workspace.slug}/activate`,
+        nextSteps: [
+          'Activate your workspace to claim it with your personal credentials',
+          'Choose a secure email and password for your account',
+          'After activation, use your personal credentials to login'
+        ]
+      }, {
+        message: 'Generic login successful. Please activate your workspace to continue.'
+      })
+    );
   } catch (error) {
     logger.error('Workspace login error', { error });
-    res.status(500).json({
-      success: false,
-      error: 'Login failed'
-    });
+    res.status(500).json(
+      createErrorResponse(
+        ErrorCode.DATABASE_ERROR,
+        'Unable to process login request',
+        {
+          retryable: true,
+          nextSteps: [
+            'Try again in a few moments',
+            'Contact support if the problem persists'
+          ]
+        }
+      )
+    );
   }
 });
 
