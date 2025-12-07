@@ -5,11 +5,14 @@
  * Features:
  * - Database availability checking (graceful degradation)
  * - Idempotent initialization (safe to run multiple times)
- * - Supports both SQLite and PostgreSQL
+ * - PostgreSQL database (uses src/db/connection.ts)
  * - 20 pre-configured workspaces as documented
  * - Comprehensive error handling and logging
  * - Progress reporting
  * - Can run as part of server startup OR as separate script
+ * 
+ * Note: This service requires PostgreSQL as it uses PostgreSQL-specific syntax
+ * (uuid_generate_v4(), TEXT[], INTERVAL). For SQLite workflows, see src/automation/db/
  */
 
 import db from '../db/connection';

@@ -5,13 +5,15 @@
  * Features:
  * - JWT-based verification tokens (24h expiration)
  * - Rate limiting to prevent spam
- * - Database-backed token storage
+ * - Database-backed token storage (PostgreSQL)
  * - HTML and plain text email templates
  * - Token expiration handling
  * - Resend verification support
+ * 
+ * Note: This service requires PostgreSQL as it uses PostgreSQL-specific syntax
+ * (INTERVAL for date arithmetic). Uses src/db/connection.ts PostgreSQL pool.
  */
 
-import crypto from 'crypto';
 import { generateToken, verifyToken, JWTPayload } from '../auth/jwt';
 import nodemailer from 'nodemailer';
 import db from '../db/connection';
@@ -175,7 +177,12 @@ async function markTokenAsUsed(token: string): Promise<void> {
  */
 export async function sendVerificationEmail(email: string, token: string): Promise<void> {
   const sanitizedEmail = sanitizeEmail(email);
-  const verificationUrl = `${APP_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+  // Validate APP_URL is HTTPS in production for security
+  const appUrl = process.env.NODE_ENV === 'production' && !APP_URL.startsWith('https://') 
+    ? APP_URL.replace('http://', 'https://') 
+    : APP_URL;
+  
+  const verificationUrl = `${appUrl}/api/auth/verify-email?token=${encodeURIComponent(token)}`;
   
   const mailOptions = {
     from: FROM_EMAIL,
