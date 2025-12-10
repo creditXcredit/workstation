@@ -4,6 +4,8 @@
 
 This guide provides complete instructions for deploying the **Workstation AI Agent** Chrome extension into the Google Chrome Developer Extension Builder.
 
+**🔒 Production Deployment:** For Chrome Web Store deployment, see the comprehensive [Chrome Web Store Production Checklist](CHROME_WEB_STORE_PRODUCTION_CHECKLIST.md) which includes all security requirements, backend configuration, and submission guidelines.
+
 ## 📦 Package Information
 
 **File:** `workstation-ai-agent-enterprise-v2.1.0.zip`
@@ -230,6 +232,66 @@ This guide provides complete instructions for deploying the **Workstation AI Age
 
 The extension requires a backend server for full functionality.
 
+### ⚠️ CRITICAL: Production Environment Variables
+
+**These are REQUIRED for production deployment:**
+
+#### Generate Secure JWT Secret
+
+```bash
+# Option 1: Using Node.js (Recommended - 256-bit key)
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# Option 2: Using OpenSSL
+openssl rand -hex 32
+
+# Example output:
+# a3f8d9c2b1e4f5a6d7c8b9a0e1f2d3c4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0
+```
+
+#### Required Environment Variables
+
+Create a `.env` file with these **production-ready** values:
+
+```bash
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+
+# JWT Authentication (REQUIRED - use generated secret above)
+JWT_SECRET=a3f8d9c2b1e4f5a6d7c8b9a0e1f2d3c4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0
+JWT_EXPIRATION=24h
+
+# Session Secret (MUST be different from JWT_SECRET for security)
+SESSION_SECRET=b4e9d0c3a2f5e6b7d8c9a0f1e2d3c4b5a6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1
+
+# CORS Configuration (REQUIRED - specify exact origins)
+# ⚠️ DO NOT use '*' in production - specify your actual domains
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com,https://app.yourdomain.com
+
+# Rate Limiting (Protect against abuse)
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+AUTH_RATE_LIMIT_MAX=10
+
+# Database Path (SQLite)
+SQLITE_DB_PATH=./data/workstation.db
+
+# Logging Configuration
+LOG_LEVEL=info
+LOG_FILE=./logs/workstation.log
+```
+
+#### Security Checklist for Production
+
+- [ ] **JWT_SECRET** - Generated with 256-bit random key (64 hex characters)
+- [ ] **SESSION_SECRET** - Different from JWT_SECRET
+- [ ] **ALLOWED_ORIGINS** - Specific domains only (no wildcards)
+- [ ] **NODE_ENV** - Set to "production"
+- [ ] **Rate Limiting** - Enabled and configured
+- [ ] **HTTPS** - Backend served over HTTPS (not HTTP)
+- [ ] **Secrets** - Never commit .env file to repository
+
 ### Quick Setup:
 
 ```bash
@@ -242,20 +304,28 @@ npm install
 # 3. Build backend
 npm run build
 
-# 4. Create environment file
+# 4. Create environment file from example
 cp .env.example .env
 
-# 5. Configure environment variables
-# Edit .env file:
-PORT=3000
-JWT_SECRET=your-secret-key-here
-JWT_EXPIRATION=24h
+# 5. Generate secure JWT secret
+echo "JWT_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> .env
 
-# 6. Start server
+# 6. Generate secure session secret
+echo "SESSION_SECRET=$(node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")" >> .env
+
+# 7. Edit .env file and update remaining variables:
+# - Set ALLOWED_ORIGINS to your actual domains
+# - Set NODE_ENV=production
+# - Review and adjust other settings as needed
+nano .env  # or use your preferred editor
+
+# 8. Start server
 npm start
 ```
 
 **Server will run on:** http://localhost:3000
+
+⚠️ **Production Note:** For production, use a process manager like PM2 or systemd, and ensure the server runs behind a reverse proxy (nginx, Apache) with HTTPS.
 
 ### Production Deployment:
 
