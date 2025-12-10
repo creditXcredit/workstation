@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Enterprise Chrome Extension Build Script
 # Creates a production-ready, fully functional Chrome extension ZIP
