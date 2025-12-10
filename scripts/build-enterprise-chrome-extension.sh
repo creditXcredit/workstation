@@ -147,8 +147,12 @@ cp -r "$ROOT_DIR/chrome-extension/playwright"/* "$BUILD_DIR/playwright/"
 echo "📋 Copying required libraries..."
 mkdir -p "$BUILD_DIR/lib"
 # Only copy JavaScript files, not TypeScript source files
-find "$ROOT_DIR/chrome-extension/lib" -name "*.js" -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
-find "$ROOT_DIR/chrome-extension/lib" -name "*.json" -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
+# Use cp with shell globbing to preserve any directory structure
+if [ -d "$ROOT_DIR/chrome-extension/lib" ]; then
+    # Copy only .js and .json files
+    find "$ROOT_DIR/chrome-extension/lib" -name "*.js" -type f -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
+    find "$ROOT_DIR/chrome-extension/lib" -name "*.json" -type f -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
+fi
 
 echo "✅ Extension files copied (TypeScript source files excluded)"
 
@@ -487,10 +491,10 @@ rm -rf tests 2>/dev/null || true
 
 # Remove TypeScript source files (keep only compiled .js)
 echo "🧹 Removing TypeScript source files..."
-find . -name "*.ts" -not -name "*.d.ts" -delete 2>/dev/null || true
+find "$BUILD_DIR" -name "*.ts" -not -name "*.d.ts" -type f -delete 2>/dev/null || true
 
 # Remove .map files (optional - keep for debugging)
-# find . -name "*.map" -delete
+# find "$BUILD_DIR" -name "*.map" -delete
 
 echo "✅ Cleaned development files and TypeScript sources"
 
