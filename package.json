@@ -204,7 +204,7 @@
     "@types/jsonwebtoken": "^9.0.5",
     "@types/lusca": "^1.7.5",
     "@types/mailparser": "^3.4.6",
-    "@types/node": "^20.19.25",
+    "@types/node": "^20.19.26",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.4",
     "@types/passport-github2": "^1.2.9",
