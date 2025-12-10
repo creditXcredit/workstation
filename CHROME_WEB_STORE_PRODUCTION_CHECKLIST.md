@@ -186,7 +186,17 @@ This checklist ensures your Workstation AI Agent Chrome extension and backend ar
   - [ ] Privacy policy URL added to Chrome Web Store listing
   - [ ] Privacy policy covers all required sections (see docs/privacy-policy.html)
 
-- [ ] **Permissions justification** documented:
+- [ ] **Permissions Justification** documented and ready
+  - [ ] File created: `docs/PERMISSIONS_JUSTIFICATION.md` ✅
+  - [ ] All 5 permissions explained (activeTab, storage, scripting, notifications, <all_urls>)
+  - [ ] Host permissions justified (localhost backend)
+  - [ ] User control mechanisms documented
+  - [ ] Privacy protections documented
+  - [ ] Security measures documented
+  - [ ] FAQ section included
+  - [ ] Ready for Chrome Web Store reviewer questions
+
+- [ ] **Permissions in Chrome Web Store listing:**
   - [ ] `activeTab` - Execute automation workflows on current tab
   - [ ] `storage` - Save workflows, settings, and execution history locally
   - [ ] `scripting` - Inject automation scripts into web pages

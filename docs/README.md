@@ -270,6 +270,51 @@ Download CSS/JS files locally or use different CDN
 
 **Status:** ✅ Complete guide, screenshots need to be created
 
+### Permissions Justification
+**Location:** `docs/PERMISSIONS_JUSTIFICATION.md`
+
+**Purpose:** Comprehensive documentation of all Chrome extension permissions for reviewer transparency and user understanding
+
+**Contents:**
+- Detailed justification for each of 5 permissions (activeTab, storage, scripting, notifications, <all_urls>)
+- Specific use cases for each permission
+- Privacy protection measures
+- Security implementations
+- User control mechanisms
+- Alternative approaches considered
+- Technical implementation details
+- FAQ section addressing common concerns
+- Compliance with Chrome Web Store policies
+
+**Status:** ✅ Complete and ready for submission
+
+### Screenshot Creation Tools
+**Automated Script:** `scripts/create-screenshots.sh`
+
+**Purpose:** Interactive bash script that guides through screenshot creation process
+
+**Features:**
+- Step-by-step instructions for each screenshot
+- Automatic directory creation
+- Extension build verification
+- Backend server startup reminders
+- Screenshot verification after completion
+- Professional guidance for each capture
+
+**Status:** ✅ Complete and executable
+
+### Screenshot Directory
+**Location:** `docs/screenshots/chrome-web-store/`
+
+**Required Files:**
+- screenshot-1-execute-tab.png (1280x800 or 640x400)
+- screenshot-2-workflow-builder.png (1280x800 or 640x400)
+- screenshot-3-templates.png (1280x800 or 640x400)
+- screenshot-4-history.png (1280x800 or 640x400)
+- screenshot-5-settings.png (1280x800 or 640x400)
+
+**Status:** Directory created, screenshots need to be generated manually
+
 ### Related Chrome Web Store Documentation
 - [Production Checklist](../CHROME_WEB_STORE_PRODUCTION_CHECKLIST.md) - 100+ item pre-deployment verification
 - [Enterprise Deployment](../CHROME_EXTENSION_ENTERPRISE_DEPLOYMENT.md) - Complete deployment guide
