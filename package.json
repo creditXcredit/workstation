@@ -15,6 +15,7 @@
     "build:all": "npm run build && npm run build:ui",
     "copy-assets": "mkdir -p dist/automation/db && cp src/automation/db/schema.sql dist/automation/db/",
     "build:chrome": "./scripts/build-chrome-extension.sh",
+    "build:chrome:enterprise": "bash ./scripts/build-enterprise-chrome-extension.sh",
     "package:chrome": "./scripts/build-chrome-extension.sh",
     "deploy:chrome": "./scripts/deploy-chrome-extension.sh",
     "build:downloads": "node scripts/build-downloads.js",
