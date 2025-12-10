@@ -12,6 +12,17 @@ import passport from '../auth/passport';
 import db from '../db/connection';
 import { logger } from '../utils/logger';
 import { sendPasswordResetEmail } from '../services/email';
+import { 
+  createAndSendVerification,
+  verifyEmail,
+  resendVerificationEmail 
+} from '../services/email-verification';
+import { 
+  ErrorCode, 
+  createErrorResponse, 
+  createSuccessResponse, 
+  validatePassword 
+} from '../types/errors';
 
 const router = Router();
 
@@ -25,27 +36,51 @@ router.post('/register', async (req: Request, res: Response) => {
 
     // Validation
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email and password are required'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Email and password are required',
+          {
+            nextSteps: ['Provide both email and password to register']
+          }
+        )
+      );
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid email format'
-      });
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.INVALID_EMAIL_FORMAT,
+          'Invalid email format',
+          {
+            field: 'email',
+            nextSteps: ['Use a valid email address (e.g., user@example.com)']
+          }
+        )
+      );
     }
 
     // Password strength validation
-    if (password.length < 8) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 8 characters long'
-      });
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.WEAK_PASSWORD,
+          'Password does not meet security requirements',
+          {
+            field: 'password',
+            details: passwordValidation.errors.join('. '),
+            nextSteps: [
+              'Use at least 8 characters',
+              'Include uppercase and lowercase letters',
+              'Include at least one number',
+              'Include at least one special character (!@#$%^&*)'
+            ]
+          }
+        )
+      );
     }
 
     // Check if user exists
@@ -55,10 +90,20 @@ router.post('/register', async (req: Request, res: Response) => {
     );
 
     if (existingUser.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        error: 'User already exists'
-      });
+      return res.status(409).json(
+        createErrorResponse(
+          ErrorCode.USER_ALREADY_EXISTS,
+          'An account with this email already exists',
+          {
+            field: 'email',
+            nextSteps: [
+              'Try logging in instead',
+              'Use password reset if you forgot your password',
+              'Contact support if you need help accessing your account'
+            ]
+          }
+        )
+      );
     }
 
     // Hash password
@@ -93,6 +138,14 @@ router.post('/register', async (req: Request, res: Response) => {
 
     logger.info('User registered', { userId: user.id, email: user.email });
 
+    // Send verification email asynchronously (don't block registration)
+    createAndSendVerification(user.id, user.email).catch(error => {
+      logger.error('Failed to send verification email during registration', { 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId: user.id 
+      });
+    });
+
     res.status(201).json({
       success: true,
       data: {
@@ -101,10 +154,12 @@ router.post('/register', async (req: Request, res: Response) => {
           email: user.email,
           fullName: user.full_name,
           accessLevel: user.access_level,
-          licenseKey: user.license_key
+          licenseKey: user.license_key,
+          isVerified: false
         },
         token
-      }
+      },
+      message: 'Registration successful. Please check your email to verify your account.'
     });
   } catch (error) {
     logger.error('Registration error', { error });
@@ -231,6 +286,158 @@ router.post('/logout', authenticateToken, async (req: AuthenticatedRequest, res:
 });
 
 /**
+ * Change password (authenticated users)
+ * POST /api/auth/change-password
+ */
+router.post('/change-password', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user?.userId;
+    const requestId = req.requestId;
+
+    // Validation
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.MISSING_REQUIRED_FIELD,
+          'Current password and new password are required',
+          {
+            requestId,
+            nextSteps: ['Provide both current and new password']
+          }
+        )
+      );
+    }
+
+    // Validate new password strength
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.valid) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.WEAK_PASSWORD,
+          'New password does not meet security requirements',
+          {
+            field: 'newPassword',
+            details: passwordValidation.errors.join('. '),
+            requestId,
+            nextSteps: [
+              'Use at least 8 characters',
+              'Include uppercase and lowercase letters',
+              'Include at least one number',
+              'Include at least one special character (!@#$%^&*)'
+            ]
+          }
+        )
+      );
+    }
+
+    // Get current user
+    const userResult = await db.query(
+      'SELECT id, email, password_hash FROM users WHERE id = $1',
+      [userId]
+    );
+
+    if (userResult.rows.length === 0) {
+      return res.status(404).json(
+        createErrorResponse(
+          ErrorCode.USER_NOT_FOUND,
+          'User not found',
+          {
+            requestId,
+            nextSteps: ['Please login again']
+          }
+        )
+      );
+    }
+
+    const user = userResult.rows[0];
+
+    // Verify current password
+    const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json(
+        createErrorResponse(
+          ErrorCode.INVALID_CREDENTIALS,
+          'Current password is incorrect',
+          {
+            field: 'currentPassword',
+            requestId,
+            retryable: true,
+            nextSteps: [
+              'Check your current password',
+              'Use password reset if you forgot your password'
+            ]
+          }
+        )
+      );
+    }
+
+    // Check if new password is same as current
+    const samePassword = await bcrypt.compare(newPassword, user.password_hash);
+    if (samePassword) {
+      return res.status(400).json(
+        createErrorResponse(
+          ErrorCode.INVALID_INPUT_FORMAT,
+          'New password must be different from current password',
+          {
+            field: 'newPassword',
+            requestId,
+            nextSteps: ['Choose a different password']
+          }
+        )
+      );
+    }
+
+    // Hash new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    await db.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [newPasswordHash, userId]
+    );
+
+    // Invalidate all other sessions (optional security measure)
+    const currentToken = req.headers.authorization?.split(' ')[1];
+    await db.query(
+      'UPDATE user_sessions SET is_valid = false WHERE user_id = $1 AND token != $2',
+      [userId, currentToken]
+    );
+
+    logger.info('Password changed successfully', { userId, email: user.email });
+
+    res.json(
+      createSuccessResponse(
+        {
+          message: 'Password changed successfully',
+          sessionsInvalidated: true
+        },
+        {
+          message: 'Your password has been updated. All other sessions have been logged out for security.',
+          requestId
+        }
+      )
+    );
+  } catch (error) {
+    logger.error('Password change error', { error, userId: req.user?.userId });
+    res.status(500).json(
+      createErrorResponse(
+        ErrorCode.INTERNAL_SERVER_ERROR,
+        'Failed to change password',
+        {
+          requestId: req.requestId,
+          retryable: true,
+          nextSteps: [
+            'Try again in a few moments',
+            'Contact support if the problem persists'
+          ]
+        }
+      )
+    );
+  }
+});
+
+/**
  * Get current user
  * GET /api/auth/me
  */
@@ -290,18 +497,245 @@ router.get('/me', authenticateToken, async (req: AuthenticatedRequest, res: Resp
 });
 
 /**
- * Verify email token (placeholder for email verification)
+ * Verify email using token
+ * GET /api/auth/verify-email?token=xxx
+ */
+router.get('/verify-email', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token is required'
+      });
+    }
+
+    // Verify email using token
+    const result = await verifyEmail(token);
+
+    if (result.success) {
+      logger.info('Email verified successfully via endpoint', { 
+        userId: result.userId,
+        email: result.email 
+      });
+      
+      // Return HTML response for better UX
+      return res.status(200).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Email Verified - Workstation</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+              padding: 40px;
+              max-width: 500px;
+              text-align: center;
+            }
+            .success-icon {
+              font-size: 64px;
+              color: #28a745;
+              margin-bottom: 20px;
+            }
+            h1 {
+              color: #333;
+              margin: 0 0 10px 0;
+              font-size: 28px;
+            }
+            p {
+              color: #666;
+              font-size: 16px;
+              line-height: 1.6;
+              margin: 0 0 30px 0;
+            }
+            .btn {
+              display: inline-block;
+              background-color: #007bff;
+              color: white;
+              padding: 12px 32px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: bold;
+              transition: background-color 0.3s;
+            }
+            .btn:hover {
+              background-color: #0056b3;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="success-icon">✓</div>
+            <h1>Email Verified Successfully!</h1>
+            <p>Your email address has been verified. You can now access all features of Workstation.</p>
+            <a href="${process.env.APP_URL || 'http://localhost:7042'}" class="btn">Go to Dashboard</a>
+          </div>
+        </body>
+        </html>
+      `);
+    } else {
+      logger.warn('Email verification failed via endpoint', { 
+        error: result.message 
+      });
+      
+      return res.status(400).send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Verification Failed - Workstation</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+              margin: 0;
+              padding: 20px;
+            }
+            .container {
+              background: white;
+              border-radius: 12px;
+              box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+              padding: 40px;
+              max-width: 500px;
+              text-align: center;
+            }
+            .error-icon {
+              font-size: 64px;
+              color: #dc3545;
+              margin-bottom: 20px;
+            }
+            h1 {
+              color: #333;
+              margin: 0 0 10px 0;
+              font-size: 28px;
+            }
+            p {
+              color: #666;
+              font-size: 16px;
+              line-height: 1.6;
+              margin: 0 0 30px 0;
+            }
+            .btn {
+              display: inline-block;
+              background-color: #007bff;
+              color: white;
+              padding: 12px 32px;
+              text-decoration: none;
+              border-radius: 6px;
+              font-weight: bold;
+              transition: background-color 0.3s;
+              margin: 0 5px;
+            }
+            .btn:hover {
+              background-color: #0056b3;
+            }
+            .btn-secondary {
+              background-color: #6c757d;
+            }
+            .btn-secondary:hover {
+              background-color: #5a6268;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="error-icon">✗</div>
+            <h1>Verification Failed</h1>
+            <p>${result.message}</p>
+            <a href="${process.env.APP_URL || 'http://localhost:7042'}/api/auth/resend-verification" class="btn btn-secondary">Resend Verification Email</a>
+            <a href="${process.env.APP_URL || 'http://localhost:7042'}" class="btn">Go to Home</a>
+          </div>
+        </body>
+        </html>
+      `);
+    }
+  } catch (error) {
+    logger.error('Email verification error', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Verification failed due to server error'
+    });
+  }
+});
+
+/**
+ * Resend verification email
+ * POST /api/auth/resend-verification
+ */
+router.post('/resend-verification', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Resend verification email with rate limiting
+    const result = await resendVerificationEmail(userId);
+
+    if (result.success) {
+      logger.info('Verification email resent', { userId });
+      return res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      logger.warn('Failed to resend verification email', { 
+        userId,
+        reason: result.message 
+      });
+      return res.status(400).json({
+        success: false,
+        error: result.message
+      });
+    }
+  } catch (error) {
+    logger.error('Resend verification error', { 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    });
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to resend verification email'
+    });
+  }
+});
+
+/**
+ * Verify email token (legacy endpoint - redirects to new endpoint)
  * GET /api/auth/verify/:token
  */
 router.get('/verify/:token', async (req: Request, res: Response) => {
   try {
-    // TODO: Implement email verification logic
-    res.json({
-      success: true,
-      message: 'Email verification endpoint (not yet implemented)'
-    });
+    const { token } = req.params;
+    // Redirect to new endpoint with query parameter
+    res.redirect(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
   } catch (error) {
-    logger.error('Email verification error', { error });
+    logger.error('Email verification redirect error', { error });
     res.status(500).json({
       success: false,
       error: 'Verification failed'
