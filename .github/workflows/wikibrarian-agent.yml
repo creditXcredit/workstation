@@ -518,6 +518,10 @@ jobs:
           fi
           cd ..
       
+      - name: Get timestamp
+        id: timestamp
+        run: echo "datetime=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+      
       - name: Create Pull Request for MCP memory update
         if: github.event.inputs.dry_run != 'true'
         uses: peter-evans/create-pull-request@v7
@@ -526,7 +530,7 @@ jobs:
           branch: auto/wikibrarian-memory-${{ github.run_number }}
           base: main
           commit-message: |
-            🧠 Update Wikibrarian MCP memory - $(date -u +'%Y-%m-%d %H:%M UTC') [skip ci]
+            🧠 Update Wikibrarian MCP memory - ${{ steps.timestamp.outputs.datetime }} [skip ci]
             
             - Updated MCP memory state
             - Synced wiki content metadata
@@ -541,7 +545,7 @@ jobs:
             - ✅ Synced wiki content metadata
             
             ### Metadata
-            - **Timestamp**: $(date -u +'%Y-%m-%d %H:%M UTC')
+            - **Timestamp**: ${{ steps.timestamp.outputs.datetime }}
             - **Trigger**: ${{ github.event_name }}
             - **Wiki Tab**: ${{ github.event.inputs.wiki_tab || 'all' }}
             

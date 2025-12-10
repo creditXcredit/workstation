@@ -65,10 +65,16 @@ jobs:
           
           echo "✅ Directory map updated"
       
+      - name: Get timestamp
+        id: timestamp
+        run: |
+          echo "date=$(date +%Y-%m-%d)" >> $GITHUB_OUTPUT
+          echo "datetime=$(date +%Y-%m-%d-%H%M)" >> $GITHUB_OUTPUT
+      
       - name: Create Docker rollback image
         run: |
           echo "Creating rollback snapshot..."
-          echo "Image: edugit-curriculum:$(date +%Y-%m-%d-%H%M)"
+          echo "Image: edugit-curriculum:${{ steps.timestamp.outputs.datetime }}"
           echo "✅ Rollback image prepared"
       
       - name: Create Pull Request for curriculum updates
@@ -78,7 +84,7 @@ jobs:
           branch: auto/edugit-curriculum-update-${{ github.run_number }}
           base: main
           commit-message: |
-            EduGit-CodeAgent: Update curriculum content ($(date +%Y-%m-%d)) [skip ci]
+            EduGit-CodeAgent: Update curriculum content (${{ steps.timestamp.outputs.date }}) [skip ci]
             
             - Updated curriculum content
             - Synchronized directory map
@@ -92,10 +98,10 @@ jobs:
             ### Changes Included
             - ✅ Updated curriculum content
             - ✅ Synchronized directory map
-            - ✅ Created Docker rollback image: `edugit-curriculum:$(date +%Y-%m-%d-%H%M)`
+            - ✅ Created Docker rollback image: `edugit-curriculum:${{ steps.timestamp.outputs.datetime }}`
             
             ### Metadata
-            - **Date**: $(date +%Y-%m-%d)
+            - **Date**: ${{ steps.timestamp.outputs.date }}
             - **Trigger**: ${{ github.event_name }}
             - **Run ID**: ${{ github.run_id }}
             

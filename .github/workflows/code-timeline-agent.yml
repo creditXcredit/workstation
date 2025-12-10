@@ -169,6 +169,10 @@ jobs:
             echo "AUTOMATION_DIRECTORY.md not found, skipping update"
           fi
       
+      - name: Get timestamp
+        id: timestamp
+        run: echo "datetime=$(date -u +'%Y-%m-%d %H:%M UTC')" >> $GITHUB_OUTPUT
+      
       - name: Create Pull Request for timeline update
         if: github.event.inputs.dry_run != 'true'
         uses: peter-evans/create-pull-request@v7
@@ -177,7 +181,7 @@ jobs:
           branch: auto/code-timeline-update-${{ github.run_number }}
           base: main
           commit-message: |
-            📊 Daily code timeline update - $(date -u +'%Y-%m-%d %H:%M UTC') [skip ci]
+            📊 Daily code timeline update - ${{ steps.timestamp.outputs.datetime }} [skip ci]
             
             - Total LOC: ${{ steps.stats.outputs.total_loc }}
             - Production: ${{ steps.stats.outputs.prod_loc }}

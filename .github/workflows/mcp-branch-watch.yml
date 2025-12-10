@@ -133,6 +133,10 @@ jobs:
           echo "- ✅ Rollback snapshot created" >> $GITHUB_STEP_SUMMARY
           echo "- 🔄 Full stack integration (would trigger here)" >> $GITHUB_STEP_SUMMARY
       
+      - name: Get timestamp
+        id: timestamp
+        run: echo "datetime=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+      
       - name: Create Pull Request for MCP sync
         if: steps.sync.outputs.sync_completed == 'true'
         uses: peter-evans/create-pull-request@v7
@@ -141,7 +145,7 @@ jobs:
           branch: auto/mcp-sync-${{ github.run_number }}
           base: main
           commit-message: |
-            chore: Sync MCP repository - $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]
+            chore: Sync MCP repository - ${{ steps.timestamp.outputs.datetime }} [skip ci]
             
             - Synced MCP repository updates
             - Created rollback snapshot
@@ -159,7 +163,7 @@ jobs:
             - ✅ Sync logs updated in `logs/mcp-sync.log`
             
             ### Sync Details
-            - **Timestamp**: $(date -u +%Y-%m-%dT%H:%M:%SZ)
+            - **Timestamp**: ${{ steps.timestamp.outputs.datetime }}
             - **Trigger**: ${{ github.event_name }}
             - **Action**: ${{ github.event.inputs.action || 'sync' }}
             
