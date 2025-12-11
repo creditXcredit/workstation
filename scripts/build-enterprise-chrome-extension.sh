@@ -147,11 +147,9 @@ cp -r "$ROOT_DIR/chrome-extension/playwright"/* "$BUILD_DIR/playwright/"
 echo "📋 Copying required libraries..."
 mkdir -p "$BUILD_DIR/lib"
 # Only copy JavaScript files, not TypeScript source files
-# Use cp with shell globbing to preserve any directory structure
 if [ -d "$ROOT_DIR/chrome-extension/lib" ]; then
-    # Copy only .js and .json files
-    find "$ROOT_DIR/chrome-extension/lib" -name "*.js" -type f -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
-    find "$ROOT_DIR/chrome-extension/lib" -name "*.json" -type f -exec cp {} "$BUILD_DIR/lib/" \; 2>/dev/null || true
+    # Use rsync to preserve directory structure while filtering file types
+    rsync -av --include='*/' --include='*.js' --include='*.json' --exclude='*' "$ROOT_DIR/chrome-extension/lib/" "$BUILD_DIR/lib/" 2>/dev/null || true
 fi
 
 echo "✅ Extension files copied (TypeScript source files excluded)"
