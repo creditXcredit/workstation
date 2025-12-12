@@ -89,10 +89,13 @@ fi
 
 # Verify JWT_SECRET is set and secure
 print_status "info" "Verifying JWT_SECRET security..."
-source .env
+# Safely extract JWT_SECRET from .env without sourcing
+JWT_SECRET=$(grep -E '^\s*JWT_SECRET\s*=' .env | grep -v '^\s*#' | tail -n 1 | sed -E 's/^\s*JWT_SECRET\s*=\s*//;s/\r$//')
 if [ -z "$JWT_SECRET" ] || [ "$JWT_SECRET" = "changeme" ] || [ "$JWT_SECRET" = "your-secret-key-change-this-in-production-min-32-chars" ]; then
-    print_status "error" "JWT_SECRET is not configured or insecure"
+    print_status "error" "JWT_SECRET is not configured or is insecure in your .env file"
+    print_status "info" "To fix: Open your .env file and replace the JWT_SECRET value with a secure random string."
     print_status "info" "Generate a secure secret with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    print_status "warning" "After updating .env, re-run this script."
     exit 1
 fi
 
@@ -105,6 +108,8 @@ print_status "success" "JWT_SECRET is configured securely (${#JWT_SECRET} charac
 
 # Verify SESSION_SECRET
 print_status "info" "Verifying SESSION_SECRET..."
+# Safely extract SESSION_SECRET from .env without sourcing
+SESSION_SECRET=$(grep -E '^\s*SESSION_SECRET\s*=' .env | grep -v '^\s*#' | tail -n 1 | sed -E 's/^\s*SESSION_SECRET\s*=\s*//;s/\r$//')
 if [ -z "$SESSION_SECRET" ] || [ "$SESSION_SECRET" = "$JWT_SECRET" ]; then
     print_status "error" "SESSION_SECRET must be set and different from JWT_SECRET"
     exit 1
@@ -235,6 +240,19 @@ if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
 fi
 
 print_status "success" "Port $PORT is available"
+
+# Trap to cleanup server on script exit
+cleanup_server() {
+    if [ -f ".server.pid" ]; then
+        SERVER_PID=$(cat .server.pid)
+        if kill -0 "$SERVER_PID" 2>/dev/null; then
+            print_status "info" "Cleaning up server process (PID: $SERVER_PID)..."
+            kill "$SERVER_PID" 2>/dev/null || true
+            rm -f .server.pid
+        fi
+    fi
+}
+trap cleanup_server EXIT INT TERM
 
 # Start server in background
 print_status "info" "Starting server on port $PORT..."

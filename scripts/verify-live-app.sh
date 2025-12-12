@@ -180,8 +180,10 @@ echo ""
 if [ -f ".env" ]; then
     print_test "PASS" ".env file exists"
     
-    # Check critical variables
-    source .env
+    # Safely extract variables from .env without sourcing
+    JWT_SECRET="$(grep -E '^\s*JWT_SECRET\s*=' .env | grep -v '^\s*#' | tail -n 1 | sed -E 's/^\s*JWT_SECRET\s*=\s*//;s/\r$//')"
+    SESSION_SECRET="$(grep -E '^\s*SESSION_SECRET\s*=' .env | grep -v '^\s*#' | tail -n 1 | sed -E 's/^\s*SESSION_SECRET\s*=\s*//;s/\r$//')"
+    ENCRYPTION_KEY="$(grep -E '^\s*ENCRYPTION_KEY\s*=' .env | grep -v '^\s*#' | tail -n 1 | sed -E 's/^\s*ENCRYPTION_KEY\s*=\s*//;s/\r$//')"
     
     if [ -n "$JWT_SECRET" ] && [ ${#JWT_SECRET} -ge 32 ]; then
         print_test "PASS" "JWT_SECRET configured securely (${#JWT_SECRET} chars)"
@@ -223,8 +225,13 @@ print_test "INFO" "Running ESLint..."
 if npm run lint > /tmp/lint-test.log 2>&1; then
     print_test "PASS" "ESLint passed with no errors"
 else
-    ERROR_COUNT=$(grep -c "error" /tmp/lint-test.log 2>/dev/null || echo "0")
-    WARNING_COUNT=$(grep -c "warning" /tmp/lint-test.log 2>/dev/null || echo "0")
+    # More reliable error/warning count extraction using specific patterns
+    ERROR_COUNT=$(grep -E "^\s*[0-9]+:[0-9]+\s+error\s+" /tmp/lint-test.log 2>/dev/null | wc -l || echo "0")
+    WARNING_COUNT=$(grep -E "^\s*[0-9]+:[0-9]+\s+warning\s+" /tmp/lint-test.log 2>/dev/null | wc -l || echo "0")
+    
+    # Trim whitespace from counts
+    ERROR_COUNT=$(echo "$ERROR_COUNT" | tr -d ' ')
+    WARNING_COUNT=$(echo "$WARNING_COUNT" | tr -d ' ')
     
     if [ "$ERROR_COUNT" = "0" ]; then
         print_test "PASS" "ESLint passed (0 errors, $WARNING_COUNT warnings)"
@@ -251,6 +258,17 @@ if lsof -Pi :$PORT -sTCP:LISTEN -t >/dev/null 2>&1; then
     SERVER_RUNNING=true
 else
     print_test "INFO" "Starting test server on port $PORT..."
+    
+    # Trap to ensure cleanup of background server on exit or interruption
+    cleanup_test_server() {
+        if [[ -n "${TEST_SERVER_PID:-}" ]] && kill -0 "$TEST_SERVER_PID" 2>/dev/null; then
+            echo -e "${YELLOW}Cleaning up test server (PID $TEST_SERVER_PID)...${NC}"
+            kill "$TEST_SERVER_PID" 2>/dev/null || true
+            wait "$TEST_SERVER_PID" 2>/dev/null || true
+        fi
+    }
+    trap cleanup_test_server EXIT INT TERM
+    
     nohup npm start > /tmp/test-server.log 2>&1 &
     TEST_SERVER_PID=$!
     sleep 5
@@ -306,8 +324,8 @@ fi
 
 # Stop test server if we started it
 if [ "$SERVER_RUNNING" = false ]; then
-    if [ -n "$TEST_SERVER_PID" ]; then
-        kill $TEST_SERVER_PID 2>/dev/null || true
+    if [ -n "${TEST_SERVER_PID:-}" ]; then
+        kill "$TEST_SERVER_PID" 2>/dev/null || true
         print_test "INFO" "Test server stopped"
     fi
 fi
@@ -354,9 +372,14 @@ echo -e "${YELLOW}⚠️  WARNINGS: $WARNINGS${NC}"
 echo ""
 
 TOTAL=$((PASSED + FAILED + WARNINGS))
-SUCCESS_RATE=$((PASSED * 100 / TOTAL))
 
-echo "Success Rate: $SUCCESS_RATE% ($PASSED/$TOTAL)"
+if [ "$TOTAL" -eq 0 ]; then
+    SUCCESS_RATE=0
+    echo -e "${YELLOW}⚠️  No tests were run. Success Rate is 0%.${NC}"
+else
+    SUCCESS_RATE=$((PASSED * 100 / TOTAL))
+    echo "Success Rate: $SUCCESS_RATE% ($PASSED/$TOTAL)"
+fi
 echo ""
 
 if [ $FAILED -eq 0 ]; then
