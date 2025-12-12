@@ -1,8 +1,8 @@
 #!/bin/bash
 # Display startup instructions for new users
 
-# Get version from package.json
-VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "2.1.0")
+# Enable nullglob to handle case when no ZIP files exist
+shopt -s nullglob
 
 # Display instructions
 cat << EOF
@@ -18,12 +18,15 @@ EOF
 
 # List available ZIPs with sizes if they exist
 if [ -d "dist" ]; then
-  for zip in dist/workstation-ai-agent*.zip; do
-    if [ -f "$zip" ]; then
+  ZIPS=(dist/workstation-ai-agent*.zip)
+  if [ ${#ZIPS[@]} -gt 0 ]; then
+    for zip in "${ZIPS[@]}"; do
       SIZE=$(ls -lh "$zip" 2>/dev/null | awk '{print $5}')
       echo "   - $zip ($SIZE)"
-    fi
-  done
+    done
+  else
+    echo "   (No pre-built ZIPs found - run build script first)"
+  fi
 fi
 
 cat << 'EOF'

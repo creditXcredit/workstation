@@ -28,7 +28,7 @@ bash ./scripts/build-enterprise-chrome-extension.sh
 **Production ZIPs are already built!** No build required:
 
 1. Go to `../dist/` directory
-2. Extract `workstation-ai-agent-enterprise-v2.1.0.zip`
+2. Extract any `workstation-ai-agent-*.zip` file
 3. Load the extracted folder in Chrome:
    - Navigate to `chrome://extensions/`
    - Enable "Developer mode"
