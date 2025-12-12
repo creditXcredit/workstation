@@ -1,16 +1,41 @@
 # Workstation Chrome Extension
 
-## 🚀 Quick Install
+## ⚠️ DO NOT LOAD THIS FOLDER DIRECTLY INTO CHROME
 
-**3 simple steps:**
+This folder contains **SOURCE CODE** that must be built first.
 
-1. **Open Chrome:** Navigate to `chrome://extensions/`
-2. **Enable Developer mode:** Toggle in top-right corner
-3. **Load unpacked:** Click button and select the `chrome-extension/` folder
+---
 
-✅ **Done!** Click the extension icon to start automating.
+## 🚀 Quick Start
 
-**Need help?** See [HOW_TO_USE.md](../HOW_TO_USE.md) for step-by-step guide.
+**See: [🚀_START_HERE.md](../🚀_START_HERE.md) for complete setup instructions**
+
+### Quick Version:
+
+```bash
+# From repository root:
+bash ./scripts/build-enterprise-chrome-extension.sh
+
+# Then load: dist/chrome-extension-unpacked/ in Chrome
+```
+
+**⚡ SHORTCUT:** Pre-built ZIP files already exist in `../dist/`!
+
+---
+
+## Alternative: Use Pre-Built Extension
+
+**Production ZIPs are already built!** No build required:
+
+1. Go to `../dist/` directory
+2. Extract `workstation-ai-agent-enterprise-v2.1.0.zip`
+3. Load the extracted folder in Chrome:
+   - Navigate to `chrome://extensions/`
+   - Enable "Developer mode"
+   - Click "Load unpacked"
+   - Select the extracted folder
+
+---
 
 ---
 
