@@ -1,5 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Display startup instructions for new users
+# Requires: bash 4.0+ for array support
 
 # Enable nullglob to handle case when no ZIP files exist
 shopt -s nullglob
@@ -21,7 +22,8 @@ if [ -d "dist" ]; then
   ZIPS=(dist/workstation-ai-agent*.zip)
   if [ ${#ZIPS[@]} -gt 0 ]; then
     for zip in "${ZIPS[@]}"; do
-      SIZE=$(ls -lh "$zip" 2>/dev/null | awk '{print $5}')
+      # Use du for reliable cross-platform file size
+      SIZE=$(du -h "$zip" 2>/dev/null | cut -f1)
       echo "   - $zip ($SIZE)"
     done
   else

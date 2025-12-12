@@ -4,6 +4,8 @@
 
 This folder contains **SOURCE CODE** that must be built first.
 
+**Loading this folder directly will result in errors and broken functionality.**
+
 ---
 
 ## 🚀 Quick Start
