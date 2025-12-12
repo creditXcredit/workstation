@@ -5,7 +5,7 @@
 
 const AUTO_CONNECT = {
   // Default backend URL
-  DEFAULT_BACKEND: 'http://localhost:3000',
+  DEFAULT_BACKEND: 'http://localhost:7042',
   
   // Connection check interval (ms)
   CHECK_INTERVAL: 10000,
@@ -57,6 +57,8 @@ async function checkBackendConnection(url = AUTO_CONNECT.DEFAULT_BACKEND) {
  */
 async function findAvailableBackend() {
   const urlsToTry = [
+    'http://localhost:7042',
+    'http://127.0.0.1:7042',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
     'http://localhost:8080',
