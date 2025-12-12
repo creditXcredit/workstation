@@ -10,7 +10,7 @@
     "esbuild": "^0.25.0"
   },
   "scripts": {
-    "start:all": "echo '🚀 See START_HERE.md for complete setup instructions' && echo '' && echo '1. Build Chrome Extension: bash ./scripts/build-enterprise-chrome-extension.sh' && echo '2. Extract and load in Chrome: chrome://extensions/' && echo '3. Start Backend: npm start' && echo '' && echo 'OR use pre-built ZIPs in dist/ directory!'",
+    "start:all": "./scripts/show-start-instructions.sh",
     "build": "tsc && npm run copy-assets",
     "build:ui": "vite build",
     "build:all": "npm run build && npm run build:ui",
