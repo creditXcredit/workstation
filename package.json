@@ -10,6 +10,7 @@
     "esbuild": "^0.25.0"
   },
   "scripts": {
+    "start:all": "./scripts/show-start-instructions.sh",
     "build": "tsc && npm run copy-assets",
     "build:ui": "vite build",
     "build:all": "npm run build && npm run build:ui",

@@ -1,5 +1,9 @@
 # 🖥️ Workstation
 
+# 🔥 QUICK START: See [🚀_START_HERE.md](./🚀_START_HERE.md) for complete setup instructions
+
+---
+
 **Privacy-First Browser Automation Platform**
 
 [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/template/stackbrowseragent)
