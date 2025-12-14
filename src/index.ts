@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import lusca from 'lusca';
+import { version as APP_VERSION } from '../package.json';
 // Validate JWT_SECRET before server initialization - FAIL FAST
 // Skip this check in test environment to allow tests to run
 if (process.env.NODE_ENV !== 'test') {
@@ -470,15 +471,19 @@ import MCPWebSocketServer from './services/mcp-websocket';
 
 // Root - informative landing page explaining architecture
 app.get('/', (req: Request, res: Response) => {
+  const host = req.get('host') || `localhost:${PORT}`;
+  const protocol = req.protocol;
+  const baseUrl = `${protocol}://${host}`;
+  
   res.json({
     name: 'WorkStation Browser Automation Platform',
-    version: '2.1.0',
+    version: APP_VERSION,
     architecture: 'Extension-First',
     message: 'Welcome to WorkStation! This is an extension-first automation platform.',
     primaryUI: 'Chrome Extension',
     quickStart: {
-      step1: 'Install the Chrome extension from dist/workstation-ai-agent-enterprise-v2.1.0.zip',
-      step2: 'Configure backend URL in extension Settings tab to http://localhost:' + PORT,
+      step1: `Install the Chrome extension from dist/workstation-ai-agent-enterprise-v${APP_VERSION}.zip`,
+      step2: `Configure backend URL in extension Settings tab to ${baseUrl}`,
       step3: 'Use the extension popup to access Execute, Builder, Templates, History, and Settings'
     },
     webInterfaces: {
@@ -511,10 +516,14 @@ app.get('/workflow-builder.html', (req: Request, res: Response) => {
 // API status endpoint - shows build info, DB mode, available routes
 app.get('/api/status', (req: Request, res: Response) => {
   const dbConfig = process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite (local)';
+  const host = req.get('host') || `localhost:${PORT}`;
+  const protocol = req.protocol;
+  const baseUrl = `${protocol}://${host}`;
+  const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
   
   res.json({
     status: 'operational',
-    version: '2.1.0',
+    version: APP_VERSION,
     environment: process.env.NODE_ENV || 'development',
     database: {
       mode: dbConfig,
@@ -544,13 +553,13 @@ app.get('/api/status', (req: Request, res: Response) => {
         'GET /auth/demo-token - Get demo token'
       ],
       websocket: [
-        'ws://localhost:' + PORT + '/ws/executions - Real-time workflow updates',
-        'ws://localhost:' + PORT + '/mcp - MCP protocol integration'
+        `${wsProtocol}://${host}/ws/executions - Real-time workflow updates`,
+        `${wsProtocol}://${host}/mcp - MCP protocol integration`
       ]
     },
     extensionSetup: {
       primary: 'The Chrome extension is the primary UI for this platform',
-      backendUrl: 'Configure backend URL in extension Settings: http://localhost:' + PORT,
+      backendUrl: `Configure backend URL in extension Settings: ${baseUrl}`,
       features: ['Execute workflows', 'Visual Builder', '32 Templates', 'Execution History', 'Settings']
     }
   });

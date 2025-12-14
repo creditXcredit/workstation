@@ -17,7 +17,14 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-// Generate a cryptographically secure random secret
+/**
+ * Generate a cryptographically secure random secret
+ * @param {number} bytes - Number of random bytes to generate (default: 32)
+ * @returns {string} - Hex-encoded string (length = bytes * 2)
+ * 
+ * Example: generateSecret(32) produces 64 hex characters (32 bytes * 2 = 64 chars)
+ * This provides 256-bit security (32 bytes = 256 bits)
+ */
 function generateSecret(bytes = 32) {
   return crypto.randomBytes(bytes).toString('hex');
 }
@@ -28,6 +35,8 @@ function readEnvExample() {
   
   if (!fs.existsSync(envExamplePath)) {
     console.error('❌ Error: .env.example file not found');
+    console.error(`   Expected location: ${envExamplePath}`);
+    console.error('   This file is required as a template for generating .env');
     process.exit(1);
   }
   
