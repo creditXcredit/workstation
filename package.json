@@ -1,6 +1,6 @@
 {
   "name": "stackbrowseragent",
-  "version": "1.0.0",
+  "version": "2.1.0",
   "description": "Browser Agent with JWT Authentication",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

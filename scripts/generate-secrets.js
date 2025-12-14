@@ -35,7 +35,8 @@ function readEnvExample() {
   
   if (!fs.existsSync(envExamplePath)) {
     console.error('❌ Error: .env.example file not found');
-    console.error(`   Expected location: ${envExamplePath}`);
+    console.error('   Expected: .env.example in the repository root');
+    console.error(`   Full path checked: ${envExamplePath}`);
     console.error('   This file is required as a template for generating .env');
     process.exit(1);
   }

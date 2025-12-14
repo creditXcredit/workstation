@@ -3,7 +3,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import lusca from 'lusca';
-import { version as APP_VERSION } from '../package.json';
+// Import version from package.json using require for better compatibility
+const { version: APP_VERSION } = require('../package.json');
 // Validate JWT_SECRET before server initialization - FAIL FAST
 // Skip this check in test environment to allow tests to run
 if (process.env.NODE_ENV !== 'test') {
