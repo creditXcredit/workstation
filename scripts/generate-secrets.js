@@ -101,6 +101,7 @@ function main() {
       console.log('⚠️  Warning: .env file already exists!');
       
       // Create timestamped backup to avoid overwriting previous backups
+      // Format: YYYY-MM-DDTHH-MM-SS (removing milliseconds with slice(0, -5))
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
       const backupPath = path.join(__dirname, '..', `.env.backup.${timestamp}`);
       fs.copyFileSync(envPath, backupPath);

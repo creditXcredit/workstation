@@ -473,8 +473,10 @@ import MCPWebSocketServer from './services/mcp-websocket';
 
 // Root - informative landing page explaining architecture
 app.get('/', (req: Request, res: Response) => {
-  const host = req.get('host') || `localhost:${PORT}`;
-  const protocol = req.protocol;
+  // Sanitize host to prevent Host header injection attacks
+  // Always use localhost for this informational endpoint to avoid leaking internal hostnames
+  const host = `localhost:${PORT}`;
+  const protocol = 'http';
   const baseUrl = `${protocol}://${host}`;
   
   res.json({
@@ -518,10 +520,12 @@ app.get('/workflow-builder.html', (req: Request, res: Response) => {
 // API status endpoint - shows build info, DB mode, available routes
 app.get('/api/status', (req: Request, res: Response) => {
   const dbConfig = process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite (local)';
-  const host = req.get('host') || `localhost:${PORT}`;
-  const protocol = req.protocol;
+  // Sanitize host to prevent Host header injection attacks
+  // Always use localhost for status endpoint to avoid leaking internal hostnames
+  const host = `localhost:${PORT}`;
+  const protocol = 'http';
   const baseUrl = `${protocol}://${host}`;
-  const wsProtocol = protocol === 'https' ? 'wss' : 'ws';
+  const wsProtocol = 'ws';
   
   res.json({
     status: 'operational',
