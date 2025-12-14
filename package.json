@@ -11,6 +11,7 @@
   },
   "scripts": {
     "start:all": "./scripts/show-start-instructions.sh",
+    "generate-secrets": "node scripts/generate-secrets.js --write",
     "build": "tsc && npm run copy-assets",
     "build:ui": "vite build",
     "build:all": "npm run build && npm run build:ui",

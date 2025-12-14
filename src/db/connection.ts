@@ -71,17 +71,27 @@ async function testConnection(): Promise<boolean> {
  * Initialize database connection with retry logic
  */
 async function initializeConnection(): Promise<void> {
+  // Check if DATABASE_URL is set - if not, skip PostgreSQL connection entirely
+  if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
+    logger.info('ℹ️  PostgreSQL not configured (DATABASE_URL not set) - this is normal for local development');
+    logger.info('   Using SQLite for local data storage (fully functional)');
+    logger.info('   To enable PostgreSQL: Set DATABASE_URL in .env file');
+    isConnected = false;
+    return;
+  }
+
   while (connectionRetries < MAX_RETRIES) {
     const connected = await testConnection();
     
     if (connected) {
+      logger.info('✅ Database: Using PostgreSQL (production mode)');
       return;
     }
     
     connectionRetries++;
     
     if (connectionRetries < MAX_RETRIES) {
-      logger.info(`Retrying database connection in ${RETRY_DELAY}ms...`, {
+      logger.info(`Retrying PostgreSQL connection in ${RETRY_DELAY}ms...`, {
         attempt: connectionRetries,
         maxRetries: MAX_RETRIES
       });
@@ -89,11 +99,16 @@ async function initializeConnection(): Promise<void> {
     }
   }
   
-  // After max retries, log warning but don't exit - allow graceful degradation
-  logger.warn('Database connection failed after max retries - operating in degraded mode', {
-    maxRetries: MAX_RETRIES,
-    message: 'Some features may be unavailable'
-  });
+  // After max retries, provide clear guidance
+  logger.warn('⚠️  PostgreSQL connection failed after max retries');
+  logger.warn('   If you intended to use PostgreSQL:');
+  logger.warn('   1. Verify DATABASE_URL or DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD in .env');
+  logger.warn('   2. Ensure PostgreSQL server is running');
+  logger.warn('   3. Check network connectivity and credentials');
+  logger.warn('');
+  logger.warn('   If you prefer local development:');
+  logger.warn('   1. Comment out DATABASE_URL in .env');
+  logger.warn('   2. Restart the server - SQLite will be used automatically');
   isConnected = false;
 }
 
