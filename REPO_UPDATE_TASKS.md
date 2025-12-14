@@ -1,8 +1,82 @@
 # 📋 Repository Update Tasks
 
-**Last Updated**: 2025-11-20 16:30 UTC  
-**Next Update**: 2025-11-21 21:00 UTC (Daily at 9 PM)  
+**Last Updated**: 2025-12-14 20:08 UTC  
+**Next Update**: 2025-12-15 21:00 UTC (Daily at 9 PM)  
 **Agent**: Repo Update Agent v1.0.0
+
+---
+
+## 🎯 Recent Major Changes (2025-12-14)
+
+### Routing, Configuration, and Documentation Overhaul
+
+**Problem Statement:** The repository had a disconnect between advertised features and actual implementation:
+- Routes like `/dashboard` and `/workflow-builder.html` were documented but not properly served
+- Default `.env` contained placeholder secrets causing hard failures
+- Database connection logs were confusing for local dev (SQLite vs Postgres)
+- Documentation misleadingly suggested web dashboard was primary UI (it's extension-first)
+
+**Changes Implemented:**
+
+#### 1. Routing Fixes (src/index.ts)
+- ✅ Changed root `/` from redirect to informative JSON response showing architecture
+- ✅ Added explicit route `/workflow-builder.html` serving from public/ directory
+- ✅ Created new `/api/status` endpoint showing:
+  - Database mode (SQLite vs PostgreSQL)
+  - Available routes (web, API, WebSocket)
+  - Build information (version, Node.js version, timestamp)
+  - Extension setup instructions
+
+#### 2. Configuration Hardening
+- ✅ Created `scripts/generate-secrets.js` - generates cryptographically secure 256-bit secrets
+- ✅ Added `npm run generate-secrets` command to package.json
+- ✅ Updated JWT_SECRET validation in src/index.ts to recommend generate-secrets command
+- ✅ Improved database logging:
+  - SQLite: Clear "✅ Using SQLite for local development (fully functional)" message
+  - PostgreSQL: Only attempts connection if DATABASE_URL is set
+  - No more confusing "degraded mode" spam logs
+
+#### 3. Documentation Alignment (🚀_START_HERE.md)
+- ✅ **Architectural Clarity:** Document now starts with "Extension-First" architecture statement
+- ✅ **Visual Diagram:** Added comprehensive architecture diagram showing extension → backend flow
+- ✅ **Step-by-Step Setup:**
+  - STEP 1: Build Chrome Extension
+  - STEP 2: Install in Chrome
+  - STEP 3: Start Backend (with generate-secrets guide)
+  - STEP 4: Verify Everything Works (curl commands)
+  - STEP 5: Use the Extension (primary interface)
+- ✅ **Database Behavior Section:** Clear explanation of SQLite vs PostgreSQL
+- ✅ **Troubleshooting Expansion:** 
+  - JWT_SECRET errors with fix commands
+  - Database connection warnings (normal for SQLite)
+  - OS-specific issues (Mac, Ubuntu, Windows)
+  - Port conflicts, build issues, templates not loading
+- ✅ **Quick Commands Reference:** Updated with generate-secrets and all testing commands
+- ✅ **Web Interfaces Section:** Clearly marked as "Optional" and "Supplementary"
+
+#### 4. Testing & Validation
+- ✅ Verified all routes work:
+  - `GET /` returns architecture JSON ✓
+  - `GET /api/status` returns detailed status ✓
+  - `GET /workflow-builder.html` serves HTML ✓
+  - `GET /dashboard` serves React UI ✓
+- ✅ Tested generate-secrets script produces 64-char secrets ✓
+- ✅ Verified improved logging messages appear correctly ✓
+
+**Files Changed:**
+- `src/index.ts` (routing and status endpoint)
+- `src/db/connection.ts` (PostgreSQL connection logging)
+- `src/automation/db/database.ts` (SQLite logging)
+- `scripts/generate-secrets.js` (new file)
+- `package.json` (added generate-secrets script)
+- `🚀_START_HERE.md` (complete rewrite, 532 additions, 128 deletions)
+
+**Impact:**
+- ✅ New users can now follow 🚀_START_HERE.md and have a working system
+- ✅ No more hard failures on placeholder secrets (generate-secrets provides real ones)
+- ✅ Clear understanding of extension-first architecture
+- ✅ Database mode is immediately clear in logs (SQLite or Postgres)
+- ✅ All documented routes actually work
 
 ---
 

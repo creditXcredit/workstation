@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import lusca from 'lusca';
+// Import version from package.json (resolveJsonModule is enabled in tsconfig.json)
+import * as packageJson from '../package.json';
+const APP_VERSION = packageJson.version;
 // Validate JWT_SECRET before server initialization - FAIL FAST
 // Skip this check in test environment to allow tests to run
 if (process.env.NODE_ENV !== 'test') {
@@ -24,17 +27,22 @@ if (process.env.NODE_ENV !== 'test') {
   
   if (!jwtSecret) {
     console.error('❌ FATAL: JWT_SECRET environment variable is not set.');
-    console.error('   Generate a secure secret with:');
+    console.error('   EASIEST FIX: Run the secret generator:');
+    console.error('   npm run generate-secrets');
+    console.error('');
+    console.error('   Or generate manually with:');
     console.error('   node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
-    console.error('   Or use Railway\'s automatic secret generator in railway.json');
     throw new Error('JWT_SECRET is not configured. Server will not start.');
   }
   
   // Check if it's a known weak secret
   if (unsafeSecrets.includes(jwtSecret.toLowerCase())) {
     console.error(`❌ FATAL: Unsafe JWT_SECRET detected (known weak secret: ${jwtSecret.substring(0, 4)}...)`);
-    console.error('   This is a known default/weak secret that must not be used in production.');
-    console.error('   Generate a secure secret with:');
+    console.error('   This is a known default/weak secret that must not be used.');
+    console.error('   EASIEST FIX: Run the secret generator:');
+    console.error('   npm run generate-secrets');
+    console.error('');
+    console.error('   Or generate manually with:');
     console.error('   node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
     throw new Error('Unsafe JWT_SECRET configured. Server will not start.');
   }
@@ -44,7 +52,10 @@ if (process.env.NODE_ENV !== 'test') {
     console.error(`❌ FATAL: JWT_SECRET is too short (${jwtSecret.length} characters).`);
     console.error('   Minimum 32 characters required for secure token signing.');
     console.error('   Current secret length:', jwtSecret.length);
-    console.error('   Generate a secure 64-character secret with:');
+    console.error('   EASIEST FIX: Run the secret generator:');
+    console.error('   npm run generate-secrets');
+    console.error('');
+    console.error('   Or generate manually with:');
     console.error('   node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
     throw new Error('JWT_SECRET is too short. Minimum 32 characters required.');
   }
@@ -460,9 +471,104 @@ logger.info('Context-Memory Intelligence Layer routes registered');
 import { workflowWebSocketServer } from './services/workflow-websocket';
 import MCPWebSocketServer from './services/mcp-websocket';
 
-// Root redirect to dashboard
+// Root - informative landing page explaining architecture
 app.get('/', (req: Request, res: Response) => {
-  res.redirect('/dashboard');
+  // Sanitize host to prevent Host header injection attacks
+  // Always use localhost for this informational endpoint to avoid leaking internal hostnames
+  const host = `localhost:${PORT}`;
+  const protocol = 'http';
+  const baseUrl = `${protocol}://${host}`;
+  
+  res.json({
+    name: 'WorkStation Browser Automation Platform',
+    version: APP_VERSION,
+    architecture: 'Extension-First',
+    message: 'Welcome to WorkStation! This is an extension-first automation platform.',
+    primaryUI: 'Chrome Extension',
+    quickStart: {
+      step1: `Install the Chrome extension from dist/workstation-ai-agent-enterprise-v${APP_VERSION}.zip`,
+      step2: `Configure backend URL in extension Settings tab to ${baseUrl}`,
+      step3: 'Use the extension popup to access Execute, Builder, Templates, History, and Settings'
+    },
+    webInterfaces: {
+      dashboard: '/dashboard - Production React dashboard UI',
+      workflowBuilder: '/workflow-builder.html - Visual workflow builder (also accessible via extension)',
+      legacyDashboard: '/legacy/dashboard.html - Legacy dashboard interface',
+      health: '/health - Server health check',
+      apiDocs: '/docs - API documentation'
+    },
+    apiEndpoints: {
+      health: '/health',
+      status: '/api/status',
+      templates: '/api/workflow-templates',
+      workflows: '/api/workflows',
+      agents: '/api/agents'
+    },
+    documentation: {
+      quickStart: 'See 🚀_START_HERE.md for setup instructions',
+      chromeExtension: 'See 🚀_START_HERE_CHROME_EXTENSION.md for extension details',
+      api: 'See API.md for complete API reference'
+    }
+  });
+});
+
+// Explicit route for workflow builder HTML (for backward compatibility)
+app.get('/workflow-builder.html', (req: Request, res: Response) => {
+  res.sendFile(join(__dirname, '..', 'public', 'workflow-builder.html'));
+});
+
+// API status endpoint - shows build info, DB mode, available routes
+app.get('/api/status', (req: Request, res: Response) => {
+  const dbConfig = process.env.DATABASE_URL ? 'PostgreSQL' : 'SQLite (local)';
+  // Sanitize host to prevent Host header injection attacks
+  // Always use localhost for status endpoint to avoid leaking internal hostnames
+  const host = `localhost:${PORT}`;
+  const protocol = 'http';
+  const baseUrl = `${protocol}://${host}`;
+  const wsProtocol = 'ws';
+  
+  res.json({
+    status: 'operational',
+    version: APP_VERSION,
+    environment: process.env.NODE_ENV || 'development',
+    database: {
+      mode: dbConfig,
+      note: dbConfig === 'SQLite (local)' 
+        ? 'Using SQLite for local development - this is expected and fully functional'
+        : 'Connected to PostgreSQL database'
+    },
+    architecture: 'Extension-First',
+    build: {
+      nodeVersion: process.version,
+      timestamp: new Date().toISOString()
+    },
+    availableRoutes: {
+      web: [
+        'GET / - Welcome message with architecture overview',
+        'GET /dashboard - Production React dashboard',
+        'GET /workflow-builder.html - Visual workflow builder',
+        'GET /legacy/* - Legacy HTML interfaces'
+      ],
+      api: [
+        'GET /health - Health check',
+        'GET /api/status - This endpoint',
+        'GET /api/workflow-templates - List workflow templates',
+        'GET /api/workflows - List workflows',
+        'GET /api/agents - List agents',
+        'POST /auth/token - Generate JWT token',
+        'GET /auth/demo-token - Get demo token'
+      ],
+      websocket: [
+        `${wsProtocol}://${host}/ws/executions - Real-time workflow updates`,
+        `${wsProtocol}://${host}/mcp - MCP protocol integration`
+      ]
+    },
+    extensionSetup: {
+      primary: 'The Chrome extension is the primary UI for this platform',
+      backendUrl: `Configure backend URL in extension Settings: ${baseUrl}`,
+      features: ['Execute workflows', 'Visual Builder', '32 Templates', 'Execution History', 'Settings']
+    }
+  });
 });
 
 // Catch-all route for React Router - must be after all API routes but before 404

@@ -26,7 +26,12 @@ export async function initializeDatabase(dbPath: string = './workstation.db'): P
       driver: sqlite3.Database
     });
 
-    logger.info('Database connection established', { dbPath });
+    // Clear, informative message for SQLite usage
+    logger.info('✅ Database: Using SQLite for local development (fully functional)', { 
+      dbPath,
+      mode: 'SQLite',
+      note: 'This is expected for local development. To use PostgreSQL, set DATABASE_URL in .env'
+    });
 
     // Read and execute schema
     const schemaPath = join(__dirname, 'schema.sql');
